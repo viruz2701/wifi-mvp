@@ -15,3 +15,4 @@ class UserProfile(BaseModel):
     is_blocked = Column(Boolean, default=False)
     is_vip = Column(Boolean, default=False)
     device_oui = Column(String(8), nullable=True)  # первые 3 октета MAC
+    venue_id = Column(Integer, ForeignKey("venues.id"), nullable=True)  # площадка первого появления

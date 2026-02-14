@@ -16,6 +16,10 @@ from app.core.rate_limit import RateLimitMiddleware
 
 app.add_middleware(RateLimitMiddleware, calls_per_minute=60)
 
+from app.api.v1.endpoints import banners, reports
+
+app.include_router(banners.router, prefix="/api/v1/banners", tags=["banners"])
+app.include_router(reports.router, prefix="/api/v1/reports", tags=["reports"])
 # Подключаем роутеры
 
 

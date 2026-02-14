@@ -9,7 +9,9 @@ from .sms_code import SMSCode
 from .sms_provider import SMSProvider
 from .netflow_record import NetFlowRecord
 from .wireguard_peer import WireGuardPeer
-from .portal_template import PortalTemplate   # новая модель
+from .portal_template import PortalTemplate
+from .event import Event          # новая модель
+from .banner import Banner        # новая модель
 
 __all__ = [
     "Base",
@@ -24,4 +26,6 @@ __all__ = [
     "NetFlowRecord",
     "WireGuardPeer",
     "PortalTemplate",
+    "Event",
+    "Banner",
 ]

@@ -6,6 +6,7 @@ class SMSCodeBase(BaseModel):
     phone_number: str
     code: str
     expires_at: datetime
+    venue_id: Optional[int] = None
 
 class SMSCodeCreate(SMSCodeBase):
     pass

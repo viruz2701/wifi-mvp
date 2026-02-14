@@ -6,13 +6,14 @@ from app.core.config import settings
 from app.db.session import get_db
 from app.crud.user import user as crud_user
 from app.schemas.token import TokenData
+from app.models.user import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 async def get_current_user(
     db: Session = Depends(get_db),
     token: str = Depends(oauth2_scheme)
-):
+) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -31,12 +32,30 @@ async def get_current_user(
         raise credentials_exception
     return user
 
-async def get_current_active_user(current_user = Depends(get_current_user)):
+async def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
-async def get_current_superuser(current_user = Depends(get_current_active_user)):
+async def get_current_superuser(current_user: User = Depends(get_current_active_user)) -> User:
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     return current_user
+
+# Новые зависимости для ролей
+async def get_current_admin(current_user: User = Depends(get_current_active_user)) -> User:
+    if current_user.role != "admin" and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin role required")
+    return current_user
+
+async def get_current_marketing(current_user: User = Depends(get_current_active_user)) -> User:
+    if current_user.role not in ["admin", "marketing"] and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Marketing role required")
+    return current_user
+
+async def get_current_venue_owner(current_user: User = Depends(get_current_active_user)) -> User:
+    if current_user.role == "venue_owner" and current_user.venue_id:
+        return current_user
+    if current_user.is_superuser or current_user.role == "admin":
+        return current_user
+    raise HTTPException(status_code=403, detail="Venue owner or admin required")

@@ -9,12 +9,14 @@ class UserProfileBase(BaseModel):
     is_blocked: bool = False
     is_vip: bool = False
     device_oui: Optional[str] = None
+    venue_id: Optional[int] = None
 
 class UserProfileCreate(UserProfileBase):
     pass
 
 class UserProfileUpdate(UserProfileBase):
     mac_address: Optional[str] = None
+    venue_id: Optional[int] = None
 
 class UserProfileOut(UserProfileBase):
     id: int

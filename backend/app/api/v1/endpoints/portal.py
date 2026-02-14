@@ -105,7 +105,7 @@ async def auth_request(
     expires_at = datetime.utcnow() + timedelta(minutes=5)
 
     # Сохраняем код в БД
-    sms_code = SMSCode(phone_number=phone, code=code, expires_at=expires_at)
+    sms_code = SMSCode(phone_number=phone, code=code, expires_at=expires_at, venue_id=venue_id )
     db.add(sms_code)
     db.commit()
 

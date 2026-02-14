@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, DateTime, Integer
+from sqlalchemy import Column, String, Boolean, DateTime, Integer, ForeignKey
 from sqlalchemy.sql import func
 from app.db.base import Base
 
@@ -10,5 +10,6 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
-    role = Column(String, default="admin")
+    role = Column(String, default="admin")          # admin, venue_owner, support, marketing
+    venue_id = Column(Integer, ForeignKey("venues.id"), nullable=True)  # для venue_owner
     created_at = Column(DateTime(timezone=True), server_default=func.now())

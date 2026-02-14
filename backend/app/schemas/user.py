@@ -7,6 +7,7 @@ class UserBase(BaseModel):
     is_active: bool = True
     is_superuser: bool = False
     role: str = "admin"
+    venue_id: Optional[int] = None
 
 class UserCreate(UserBase):
     password: str
