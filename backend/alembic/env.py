@@ -8,7 +8,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from app.db.base import Base
 from app.core.config import settings
-from app.models import user, venue, nas_device  # импортируем модели
+from app.models import *  # загружаем все модели
 
 config = context.config
 fileConfig(config.config_file_name)
