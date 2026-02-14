@@ -78,7 +78,22 @@ services:
       - ./frontend/build:/usr/share/nginx/html
     depends_on:
       - backend
-
+  
+  freeradius:
+    image: freeradius/freeradius-server:latest
+    container_name: wifi_freeradius
+    restart: unless-stopped
+    ports:
+      - "1812:1812/udp"  # RADIUS authentication
+      - "1813:1813/udp"  # RADIUS accounting
+    volumes:
+      - ./freeradius/config:/etc/raddb
+      - ./freeradius/logs:/var/log/radius
+    depends_on:
+      - backend
+    networks:
+      - default
+      
 volumes:
   postgres_data:
   redis_data:

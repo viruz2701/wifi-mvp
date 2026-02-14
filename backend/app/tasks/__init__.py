@@ -1,0 +1,1 @@
+from .example import celery_app, example_task
