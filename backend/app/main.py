@@ -10,6 +10,12 @@ app = FastAPI(title="WiFi Auth Platform MVP", version="0.2.0")  # обновим
 from app.api.v1.endpoints import wireguard
 app.include_router(wireguard.router, prefix="/api/v1/wireguard/peers", tags=["wireguard"])
 
+from app.api.v1.endpoints import portal_preview
+app.include_router(portal_preview.router, prefix="/api/v1/portal", tags=["portal_preview"])
+from app.core.rate_limit import RateLimitMiddleware
+
+app.add_middleware(RateLimitMiddleware, calls_per_minute=60)
+
 # Подключаем роутеры
 
 
@@ -28,6 +34,7 @@ app.include_router(radius.router, prefix="/api/v1/radius", tags=["radius"])
 app.include_router(user_profiles.router, prefix="/api/v1/user-profiles", tags=["user_profiles"])
 app.include_router(sessions.router, prefix="/api/v1/sessions", tags=["sessions"])
 app.include_router(local_users.router, prefix="/api/v1/local-users", tags=["local_users"])
+
 
 @app.get("/")
 def root():

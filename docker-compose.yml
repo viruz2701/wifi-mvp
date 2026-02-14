@@ -88,14 +88,18 @@ services:
       - ./netflow-listener:/app
 
   nginx:
+  
     image: nginx:alpine
     container_name: wifi_nginx
     restart: unless-stopped
     ports:
       - "80:80"
     volumes:
+      
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
       - ./frontend/build:/usr/share/nginx/html
+      - ./backend/static:/usr/share/nginx/html/static   # новая строка
+      
     depends_on:
       - backend
 

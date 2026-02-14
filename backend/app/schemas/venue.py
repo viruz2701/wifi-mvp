@@ -9,12 +9,17 @@ class VenueBase(BaseModel):
     contact_phone: Optional[str] = None
     contact_email: Optional[str] = None
     is_active: bool = True
+    # Новые поля
+    domain: Optional[str] = None
+    ssl_enabled: bool = False
 
 class VenueCreate(VenueBase):
     pass
 
 class VenueUpdate(VenueBase):
-    pass
+    name: Optional[str] = None
+    is_active: Optional[bool] = None
+    ssl_enabled: Optional[bool] = None
 
 class VenueOut(VenueBase):
     id: int

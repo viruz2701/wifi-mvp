@@ -10,3 +10,6 @@ class Venue(BaseModel):
     contact_phone = Column(String)
     contact_email = Column(String)
     is_active = Column(Boolean, default=True)
+    # Новые поля для этапа 4
+    domain = Column(String, unique=True, nullable=True)       # уникальный домен площадки
+    ssl_enabled = Column(Boolean, default=False)             # флаг HTTPS

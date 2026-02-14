@@ -7,8 +7,9 @@ from .session import Session
 from .local_user import LocalUser
 from .sms_code import SMSCode
 from .sms_provider import SMSProvider
-from .netflow_record import NetFlowRecord      # новая модель
-from .wireguard_peer import WireGuardPeer      # новая модель
+from .netflow_record import NetFlowRecord
+from .wireguard_peer import WireGuardPeer
+from .portal_template import PortalTemplate   # новая модель
 
 __all__ = [
     "Base",
@@ -22,4 +23,5 @@ __all__ = [
     "SMSProvider",
     "NetFlowRecord",
     "WireGuardPeer",
+    "PortalTemplate",
 ]

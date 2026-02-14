@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Enum, LargeBinary
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Enum, LargeBinary, Integer
 from sqlalchemy.sql import func
 from app.models.base import BaseModel
 import enum
