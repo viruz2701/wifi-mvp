@@ -1,0 +1,2 @@
+py-netflow==0.2.0
+httpx==0.25.1

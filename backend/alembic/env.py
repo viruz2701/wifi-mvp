@@ -9,6 +9,11 @@ sys.path.append(str(Path(__file__).parent.parent))
 from app.db.base import Base
 from app.core.config import settings
 from app.models import *  # загружаем все модели
+from app.models import (
+    User, Venue, NASDevice, 
+    UserProfile, Session, LocalUser, SMSCode, SMSProvider,  # старые модели этапа 2
+    NetFlowRecord, WireGuardPeer                             # новые модели этапа 3
+)
 
 config = context.config
 fileConfig(config.config_file_name)

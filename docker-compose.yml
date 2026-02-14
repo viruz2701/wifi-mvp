@@ -1,16 +1,16 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: wifi_postgres
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: wifi_timescaledb
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - timescaledb_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
@@ -42,15 +42,20 @@ services:
     env_file:
       - .env
     depends_on:
-      postgres:
+      timescaledb:
         condition: service_healthy
       redis:
         condition: service_healthy
     volumes:
       - ./backend:/app
+      - /etc/wireguard:/etc/wireguard:rw   # для управления WireGuard на хосте
     ports:
       - "8000:8000"
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    cap_add:
+      - NET_ADMIN                  # необходимо для команд wg
+    devices:
+      - /dev/net/tun:/dev/net/tun  # доступ к TUN устройству
 
   celery_worker:
     build:
@@ -67,6 +72,21 @@ services:
       - ./backend:/app
     command: celery -A app.tasks worker --loglevel=info
 
+  netflow_listener:
+    build:
+      context: ./netflow-listener
+      dockerfile: Dockerfile
+    container_name: wifi_netflow
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - backend
+    ports:
+      - "20002:20002/udp"
+    volumes:
+      - ./netflow-listener:/app
+
   nginx:
     image: nginx:alpine
     container_name: wifi_nginx
@@ -78,22 +98,7 @@ services:
       - ./frontend/build:/usr/share/nginx/html
     depends_on:
       - backend
-  
-  freeradius:
-    image: freeradius/freeradius-server:latest
-    container_name: wifi_freeradius
-    restart: unless-stopped
-    ports:
-      - "1812:1812/udp"  # RADIUS authentication
-      - "1813:1813/udp"  # RADIUS accounting
-    volumes:
-      - ./freeradius/config:/etc/raddb
-      - ./freeradius/logs:/var/log/radius
-    depends_on:
-      - backend
-    networks:
-      - default
-      
+
 volumes:
-  postgres_data:
+  timescaledb_data:
   redis_data:

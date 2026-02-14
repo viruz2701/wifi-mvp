@@ -4,10 +4,16 @@ from app.api.v1.endpoints import (
     sms_providers, sms_auth, local_auth, radius,
     user_profiles, sessions, local_users
 )
-
+from app.api.v1.endpoints import netflow
 app = FastAPI(title="WiFi Auth Platform MVP", version="0.2.0")  # обновим версию
 
+from app.api.v1.endpoints import wireguard
+app.include_router(wireguard.router, prefix="/api/v1/wireguard/peers", tags=["wireguard"])
+
 # Подключаем роутеры
+
+
+app.include_router(netflow.router, prefix="/api/v1/netflow", tags=["netflow"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 app.include_router(venues.router, prefix="/api/v1/venues", tags=["venues"])
