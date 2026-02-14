@@ -18,6 +18,13 @@ def read_users(
     users = crud_user.get_multi(db, skip=skip, limit=limit)
     return users
 
+@router.get("/me", response_model=UserOut)
+def read_current_user(
+    current_user: User = Depends(get_current_active_user),
+):
+    """Получить информацию о текущем пользователе."""
+    return current_user
+
 @router.post("/", response_model=UserOut)
 def create_user(
     user_in: UserCreate,
@@ -30,3 +37,10 @@ def create_user(
         raise HTTPException(status_code=400, detail="Email already registered")
     user = crud_user.create(db, obj_in=user_in)
     return user
+
+@router.get("/me", response_model=UserOut)
+def read_current_user(
+    current_user: User = Depends(get_current_active_user),
+):
+    """Получить информацию о текущем пользователе."""
+    return current_user
