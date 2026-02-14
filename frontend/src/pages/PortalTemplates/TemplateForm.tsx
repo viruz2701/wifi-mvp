@@ -14,6 +14,7 @@ import {
   Box,
 } from '@mui/material';
 import api from '@/api/axios';
+import { portalTemplateSchema, PortalTemplateFormValues } from '@/validation/portalTemplateSchema';
 import TemplateFileManager from '@/components/TemplateFileManager/TemplateFileManager';
 
 interface TemplateFormProps {
@@ -25,7 +26,7 @@ interface TemplateFormProps {
 
 export default function TemplateForm({ open, onClose, onSaved, templateId }: TemplateFormProps) {
   const [tab, setTab] = useState(0);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<PortalTemplateFormValues>({
     venue_id: 1,
     type: 'auth',
     html_content: '',
@@ -56,13 +57,6 @@ export default function TemplateForm({ open, onClose, onSaved, templateId }: Tem
     }
   }, [open, templateId]);
 
-  const validate = () => {
-    const newErrors: Record<string, string> = {};
-    if (!form.html_content.trim()) newErrors.html_content = 'HTML-код не может быть пустым';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -78,10 +72,12 @@ export default function TemplateForm({ open, onClose, onSaved, templateId }: Tem
   };
 
   const handleSubmit = async () => {
-    if (!validate()) return;
-    setLoading(true);
-    setApiError('');
     try {
+      await portalTemplateSchema.validate(form, { abortEarly: false });
+      setErrors({});
+
+      setLoading(true);
+      setApiError('');
       if (templateId) {
         await api.put(`/portal-templates/${templateId}`, form);
       } else {
@@ -90,7 +86,15 @@ export default function TemplateForm({ open, onClose, onSaved, templateId }: Tem
       onSaved();
       onClose();
     } catch (err: any) {
-      setApiError(err.response?.data?.detail || 'Ошибка сохранения');
+      if (err.name === 'ValidationError') {
+        const validationErrors: Record<string, string> = {};
+        err.inner.forEach((e: any) => {
+          if (e.path) validationErrors[e.path] = e.message;
+        });
+        setErrors(validationErrors);
+      } else {
+        setApiError(err.response?.data?.detail || 'Ошибка сохранения');
+      }
     } finally {
       setLoading(false);
     }
@@ -114,6 +118,8 @@ export default function TemplateForm({ open, onClose, onSaved, templateId }: Tem
             fullWidth
             value={form.venue_id}
             onChange={handleChange}
+            error={!!errors.venue_id}
+            helperText={errors.venue_id}
             required
           />
           <TextField

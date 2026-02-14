@@ -11,6 +11,7 @@ import {
   Alert,
 } from '@mui/material';
 import api from '@/api/axios';
+import { venueSchema, VenueFormValues } from '@/validation/venueSchema';
 
 interface VenueFormProps {
   open: boolean;
@@ -20,9 +21,9 @@ interface VenueFormProps {
 }
 
 export default function VenueForm({ open, onClose, onSaved, venueId }: VenueFormProps) {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<VenueFormValues>({
     name: '',
-    domain: '',
+    domain: null,
     description: '',
     address: '',
     contact_phone: '',
@@ -42,7 +43,7 @@ export default function VenueForm({ open, onClose, onSaved, venueId }: VenueForm
     } else if (open) {
       setForm({
         name: '',
-        domain: '',
+        domain: null,
         description: '',
         address: '',
         contact_phone: '',
@@ -53,31 +54,21 @@ export default function VenueForm({ open, onClose, onSaved, venueId }: VenueForm
     }
   }, [open, venueId]);
 
-  const validate = () => {
-    const newErrors: Record<string, string> = {};
-    if (!form.name.trim()) newErrors.name = 'Название обязательно';
-    if (form.domain && !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(form.domain)) {
-      newErrors.domain = 'Некорректный домен';
-    }
-    if (form.contact_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact_email)) {
-      newErrors.contact_email = 'Некорректный email';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setForm((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
-    // Сбрасываем ошибку для этого поля
+    // Очищаем ошибку для этого поля при изменении
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
   const handleSubmit = async () => {
-    if (!validate()) return;
-    setLoading(true);
-    setApiError('');
     try {
+      // Валидация через Yup
+      await venueSchema.validate(form, { abortEarly: false });
+      setErrors({}); // очищаем ошибки
+
+      setLoading(true);
+      setApiError('');
       if (venueId) {
         await api.put(`/venues/${venueId}`, form);
       } else {
@@ -86,7 +77,16 @@ export default function VenueForm({ open, onClose, onSaved, venueId }: VenueForm
       onSaved();
       onClose();
     } catch (err: any) {
-      setApiError(err.response?.data?.detail || 'Ошибка сохранения');
+      if (err.name === 'ValidationError') {
+        // Обработка ошибок Yup
+        const validationErrors: Record<string, string> = {};
+        err.inner.forEach((e: any) => {
+          if (e.path) validationErrors[e.path] = e.message;
+        });
+        setErrors(validationErrors);
+      } else {
+        setApiError(err.response?.data?.detail || 'Ошибка сохранения');
+      }
     } finally {
       setLoading(false);
     }
@@ -114,7 +114,7 @@ export default function VenueForm({ open, onClose, onSaved, venueId }: VenueForm
           name="domain"
           label="Домен"
           fullWidth
-          value={form.domain}
+          value={form.domain || ''}
           onChange={handleChange}
           error={!!errors.domain}
           helperText={errors.domain}
