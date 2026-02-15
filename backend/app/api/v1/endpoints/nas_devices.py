@@ -10,9 +10,47 @@ from app.schemas.wireguard_peer import WireGuardPeerCreate
 from app.core.dependencies import get_current_superuser, get_current_active_user
 from app.core.wireguard import add_peer
 from app.models.user import User
+from app.nas import get_nas_instance
 
 router = APIRouter()
 
+
+@router.post("/{id}/reboot")
+def reboot_nas_device(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_superuser)
+):
+    device = crud_nas.get(db, id=id)
+    if not device:
+        raise HTTPException(status_code=404, detail="NAS device not found")
+    nas = get_nas_instance(device)
+    if not nas:
+        raise HTTPException(status_code=400, detail="Unsupported device type")
+    try:
+        nas.reboot()
+        return {"message": "Reboot command sent"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to reboot: {e}")
+
+@router.post("/{id}/disconnect-all")
+def disconnect_all_sessions(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_superuser)
+):
+    device = crud_nas.get(db, id=id)
+    if not device:
+        raise HTTPException(status_code=404, detail="NAS device not found")
+    nas = get_nas_instance(device)
+    if not nas:
+        raise HTTPException(status_code=400, detail="Unsupported device type")
+    try:
+        nas.disconnect_all_sessions()
+        return {"message": "Disconnect all command sent"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to disconnect: {e}")
+    
 # Эндпоинт без слеша – для предотвращения редиректа
 @router.get("", response_model=List[NASDeviceOut])
 def read_nas_devices(

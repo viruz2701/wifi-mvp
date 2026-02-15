@@ -106,3 +106,19 @@ services:
 volumes:
   timescaledb_data:
   redis_data:
+
+
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: wifi_celery_beat
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - backend
+      - redis
+    volumes:
+      - ./backend:/app
+    command: celery -A app.tasks beat --loglevel=info --schedule=/tmp/celerybeat-schedule  

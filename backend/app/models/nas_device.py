@@ -21,3 +21,6 @@ class NASDevice(BaseModel):
     wireguard_pubkey = Column(String, nullable=True)
     wireguard_ip = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
+    last_seen = Column(DateTime(timezone=True), nullable=True)
+    status = Column(String, default='unknown')  # 'online', 'offline', 'unknown'
+    last_check = Column(DateTime(timezone=True), nullable=True)
