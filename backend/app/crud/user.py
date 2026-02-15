@@ -10,6 +10,11 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         return db.query(User).filter(User.email == email).first()
 
     def create(self, db: Session, *, obj_in: UserCreate) -> User:
+        # Отладочная информация
+        print("Password from obj_in:", repr(obj_in.password))
+        print("Password type:", type(obj_in.password))
+        print("Password length:", len(obj_in.password))
+
         db_obj = User(
             email=obj_in.email,
             hashed_password=get_password_hash(obj_in.password),
@@ -30,12 +35,10 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             return None
         return user
 
-    # Переопределим get_multi для User (без фильтра deleted_at)
     def get_multi(self, db: Session, *, skip: int = 0, limit: int = 100):
         return db.query(self.model).offset(skip).limit(limit).all()
 
     def remove(self, db: Session, *, id: int):
-        # Для User физическое удаление (или можно запретить)
         obj = db.query(self.model).get(id)
         if obj:
             db.delete(obj)

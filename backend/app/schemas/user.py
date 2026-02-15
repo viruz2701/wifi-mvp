@@ -23,3 +23,10 @@ class UserInDB(UserBase):
 class UserOut(UserBase):
     id: int
     created_at: datetime
+
+class UserUpdate(BaseModel):
+    email: Optional[EmailStr] = None
+    is_active: Optional[bool] = None
+    is_superuser: Optional[bool] = None
+    role: Optional[str] = None
+    venue_id: Optional[int] = None

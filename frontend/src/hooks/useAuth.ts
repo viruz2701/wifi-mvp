@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { User } from '@/types';
 import api from '@/api/axios';
 
+
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,6 +36,8 @@ export function useAuth() {
     const formData = new URLSearchParams();
     formData.append('username', email);
     formData.append('password', password);
+    console.log('Sending login request to:', '/api/v1/auth/login');
+    console.log('Form data:', formData.toString());
     const response = await fetch('/api/v1/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

@@ -5,8 +5,9 @@ from sqlalchemy import and_
 from app.db.session import get_db
 from app.crud.venue import venue as crud_venue
 from app.schemas.venue import VenueCreate, VenueUpdate, VenueOut
-from app.core.dependencies import get_current_superuser
+from app.core.dependencies import get_current_superuser, get_current_active_user
 from app.models.venue import Venue
+from app.models.user import User
 
 router = APIRouter()
 
@@ -15,9 +16,8 @@ def read_venues(
     db: Session = Depends(get_db),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
-    current_user = Depends(get_current_superuser),
+    current_user: User = Depends(get_current_active_user),
 ):
-    """Получить список всех площадок (только суперпользователь)"""
     venues = crud_venue.get_multi(db, skip=skip, limit=limit)
     return venues
 
@@ -25,10 +25,8 @@ def read_venues(
 def create_venue(
     venue_in: VenueCreate,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_superuser),
+    current_user: User = Depends(get_current_superuser),
 ):
-    """Создать новую площадку. Проверка уникальности домена, если он указан."""
-    # Если указан домен, проверяем уникальность
     if venue_in.domain:
         existing = db.query(Venue).filter(
             and_(
@@ -38,16 +36,14 @@ def create_venue(
         ).first()
         if existing:
             raise HTTPException(status_code=400, detail="Domain already in use")
-    venue = crud_venue.create(db, obj_in=venue_in)
-    return venue
+    return crud_venue.create(db, obj_in=venue_in)
 
 @router.get("/{id}", response_model=VenueOut)
 def read_venue(
     id: int,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_superuser),
+    current_user: User = Depends(get_current_active_user),
 ):
-    """Получить площадку по ID"""
     venue = crud_venue.get(db, id=id)
     if not venue:
         raise HTTPException(status_code=404, detail="Venue not found")
@@ -58,14 +54,11 @@ def update_venue(
     id: int,
     venue_in: VenueUpdate,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_superuser),
+    current_user: User = Depends(get_current_superuser),
 ):
-    """Обновить площадку. Проверка уникальности домена при изменении."""
     venue = crud_venue.get(db, id=id)
     if not venue:
         raise HTTPException(status_code=404, detail="Venue not found")
-
-    # Проверка уникальности домена, если он меняется
     if venue_in.domain is not None and venue_in.domain != venue.domain:
         existing = db.query(Venue).filter(
             and_(
@@ -75,17 +68,14 @@ def update_venue(
         ).first()
         if existing:
             raise HTTPException(status_code=400, detail="Domain already in use")
-
-    venue = crud_venue.update(db, db_obj=venue, obj_in=venue_in)
-    return venue
+    return crud_venue.update(db, db_obj=venue, obj_in=venue_in)
 
 @router.delete("/{id}", response_model=VenueOut)
 def delete_venue(
     id: int,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_superuser),
+    current_user: User = Depends(get_current_superuser),
 ):
-    """Удалить площадку (мягкое удаление)"""
     venue = crud_venue.remove(db, id=id)
     if not venue:
         raise HTTPException(status_code=404, detail="Venue not found")
