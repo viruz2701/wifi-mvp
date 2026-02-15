@@ -6,6 +6,9 @@ from app.api.v1.endpoints import (
 )
 from app.api.v1.endpoints import netflow
 
+from prometheus_fastapi_instrumentator import Instrumentator
+Instrumentator().instrument(app).expose(app)
+
 from app.core.audit_middleware import AuditMiddleware
 app.add_middleware(AuditMiddleware)
 
