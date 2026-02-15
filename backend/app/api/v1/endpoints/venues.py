@@ -51,6 +51,16 @@ def create_venue(
             raise HTTPException(status_code=400, detail="Domain already in use")
     return crud_venue.create(db, obj_in=venue_in)
 
+@router.post("", response_model=VenueOut)
+def create_venue_without_slash(
+    venue_in: VenueCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+):
+    """Создать новую площадку (без слеша в URL)."""
+    # можно вызвать ту же функцию, что и со слешем, чтобы не дублировать код
+    return create_venue(venue_in, db, current_user)
+
 @router.get("/{id}", response_model=VenueOut)
 def read_venue(
     id: int,

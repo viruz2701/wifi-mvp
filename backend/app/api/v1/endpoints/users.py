@@ -42,6 +42,15 @@ def create_user(
     user = crud_user.create(db, obj_in=user_in)
     return user
 
+@router.post("", response_model=UserOut)
+def create_user_without_slash(
+    user_in: UserCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+):
+    """Создать нового пользователя (без слеша в URL)"""
+    return create_user(user_in, db, current_user)
+
 @router.get("/me", response_model=UserOut)
 def read_current_user(
     current_user: User = Depends(get_current_active_user),

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import {
-  Box, Typography, Button, TextField, MenuItem, Grid,
+  Box, Typography, Button, TextField,
   Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Pagination, Alert, FormControl, InputLabel, Select, Stack
+  Pagination, Alert, Stack
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -10,7 +10,6 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { ru } from 'date-fns/locale';
 import { format } from 'date-fns';
 import api from '@/api/axios';
-import { useAuth } from '@/hooks/useAuth';
 import DownloadIcon from '@mui/icons-material/Download';
 
 interface AuthLog {
@@ -23,7 +22,6 @@ interface AuthLog {
 }
 
 export default function DataAudit() {
-  const { user } = useAuth();
   const [logs, setLogs] = useState<AuthLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -57,9 +55,9 @@ export default function DataAudit() {
     }
   };
 
-  const handleExport = async (format: 'csv' | 'json') => {
+  const handleExport = async (formatType: 'csv' | 'json') => {
     const params: any = {
-      format,
+      format: formatType,
       ...filters,
       from_date: filters.from_date ? format(filters.from_date, 'yyyy-MM-dd') : undefined,
       to_date: filters.to_date ? format(filters.to_date, 'yyyy-MM-dd') : undefined,
@@ -76,57 +74,47 @@ export default function DataAudit() {
     <Box>
       <Typography variant="h4" gutterBottom>Мои данные (аудит авторизаций)</Typography>
       <Paper sx={{ p: 2, mb: 2 }}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} sm={6} md={3}>
-            <TextField
-              label="MAC"
-              value={filters.mac}
-              onChange={(e) => setFilters({ ...filters, mac: e.target.value })}
-              fullWidth
-              size="small"
-            />
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <TextField
-              label="Телефон"
-              value={filters.phone}
-              onChange={(e) => setFilters({ ...filters, phone: e.target.value })}
-              fullWidth
-              size="small"
-            />
-          </Grid>
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+          <TextField
+            label="MAC"
+            value={filters.mac}
+            onChange={(e) => setFilters({ ...filters, mac: e.target.value })}
+            size="small"
+            sx={{ minWidth: 200 }}
+          />
+          <TextField
+            label="Телефон"
+            value={filters.phone}
+            onChange={(e) => setFilters({ ...filters, phone: e.target.value })}
+            size="small"
+            sx={{ minWidth: 200 }}
+          />
           <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
-            <Grid item xs={12} sm={6} md={3}>
-              <DatePicker
-                label="От"
-                value={filters.from_date}
-                onChange={(newValue) => setFilters({ ...filters, from_date: newValue })}
-                slotProps={{ textField: { size: 'small', fullWidth: true } }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <DatePicker
-                label="До"
-                value={filters.to_date}
-                onChange={(newValue) => setFilters({ ...filters, to_date: newValue })}
-                slotProps={{ textField: { size: 'small', fullWidth: true } }}
-              />
-            </Grid>
+            <DatePicker
+              label="От"
+              value={filters.from_date}
+              onChange={(newValue) => setFilters({ ...filters, from_date: newValue })}
+              slotProps={{ textField: { size: 'small' } }}
+            />
+            <DatePicker
+              label="До"
+              value={filters.to_date}
+              onChange={(newValue) => setFilters({ ...filters, to_date: newValue })}
+              slotProps={{ textField: { size: 'small' } }}
+            />
           </LocalizationProvider>
-          <Grid item xs={12}>
-            <Stack direction="row" spacing={2}>
-              <Button variant="contained" onClick={fetchLogs} disabled={loading}>
-                Применить
-              </Button>
-              <Button variant="outlined" startIcon={<DownloadIcon />} onClick={() => handleExport('csv')}>
-                CSV
-              </Button>
-              <Button variant="outlined" startIcon={<DownloadIcon />} onClick={() => handleExport('json')}>
-                JSON
-              </Button>
-            </Stack>
-          </Grid>
-        </Grid>
+          <Stack direction="row" spacing={2}>
+            <Button variant="contained" onClick={fetchLogs} disabled={loading}>
+              Применить
+            </Button>
+            <Button variant="outlined" startIcon={<DownloadIcon />} onClick={() => handleExport('csv')}>
+              CSV
+            </Button>
+            <Button variant="outlined" startIcon={<DownloadIcon />} onClick={() => handleExport('json')}>
+              JSON
+            </Button>
+          </Stack>
+        </Box>
       </Paper>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}

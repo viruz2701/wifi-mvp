@@ -1,206 +1,100 @@
-import { useState, useEffect } from 'react';
-import {
-  Box, Typography, Button, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, Paper, IconButton,
-  Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-  Alert, Chip
-} from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import AddIcon from '@mui/icons-material/Add';
-import api from '@/api/axios';
-import { useAuth } from '@/hooks/useAuth';
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+from app.db.session import get_db
+from app.crud.wireguard_peer import wireguard_peer
+from app.schemas.wireguard_peer import WireGuardPeerCreate, WireGuardPeerUpdate, WireGuardPeerOut
+from app.core.dependencies import get_current_superuser
+from app.core.wireguard import add_peer, remove_peer
+from app.crud.nas_device import nas_device as crud_nas  # импорт для проверки
 
-interface WireGuardPeer {
-  id: number;
-  nas_device_id: number;
-  public_key: string;
-  allowed_ips: string;
-  endpoint: string | null;
-  is_active: boolean;
-  created_at: string;
-}
+router = APIRouter()
 
-export default function WireGuardPeers() {
-  const { user } = useAuth();
-  const [peers, setPeers] = useState<WireGuardPeer[]>([]);
-  const [nasDevices, setNasDevices] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingPeer, setEditingPeer] = useState<WireGuardPeer | null>(null);
-  const [form, setForm] = useState({
-    nas_device_id: 0,
-    public_key: '',
-    allowed_ips: '',
-    endpoint: '',
-  });
+@router.get("/", response_model=List[WireGuardPeerOut])
+def read_peers(
+    db: Session = Depends(get_db),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=100),
+    current_user = Depends(get_current_superuser)
+):
+    return wireguard_peer.get_multi(db, skip=skip, limit=limit)
 
-  useEffect(() => {
-    fetchPeers();
-    fetchNasDevices();
-  }, []);
+@router.post("/", response_model=WireGuardPeerOut)
+def create_peer(
+    peer_in: WireGuardPeerCreate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_superuser)
+):
+    # Проверяем, существует ли NAS-устройство с таким ID
+    nas_device = crud_nas.get(db, id=peer_in.nas_device_id)
+    if not nas_device:
+        raise HTTPException(status_code=404, detail="NAS device not found")
 
-  const fetchPeers = async () => {
-    setLoading(true);
-    try {
-      const response = await api.get('/wireguard/peers');
-      setPeers(response.data);
-    } catch (err) {
-      setError('Ошибка загрузки пиров');
-    } finally {
-      setLoading(false);
-    }
-  };
+    # Проверяем, нет ли уже пира для этого NASDevice
+    existing = wireguard_peer.get_by_nas_device(db, peer_in.nas_device_id)
+    if existing:
+        raise HTTPException(status_code=400, detail="Peer already exists for this NAS device")
 
-  const fetchNasDevices = async () => {
-    try {
-      const response = await api.get('/nas-devices');
-      setNasDevices(response.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
+    # Создаём запись в БД
+    peer = wireguard_peer.create(db, obj_in=peer_in)
 
-  const handleOpen = (peer?: WireGuardPeer) => {
-    if (peer) {
-      setEditingPeer(peer);
-      setForm({
-        nas_device_id: peer.nas_device_id,
-        public_key: peer.public_key,
-        allowed_ips: peer.allowed_ips,
-        endpoint: peer.endpoint || '',
-      });
-    } else {
-      setEditingPeer(null);
-      setForm({
-        nas_device_id: 0,
-        public_key: '',
-        allowed_ips: '',
-        endpoint: '',
-      });
-    }
-    setDialogOpen(true);
-  };
+    # Добавляем в WireGuard
+    try:
+        add_peer(peer.public_key, peer.allowed_ips, peer.endpoint)
+    except Exception as e:
+        # Если ошибка, удаляем запись из БД и возвращаем ошибку
+        wireguard_peer.remove(db, id=peer.id)
+        raise HTTPException(status_code=500, detail=f"Failed to add peer to WireGuard: {e}")
 
-  const handleClose = () => {
-    setDialogOpen(false);
-    setEditingPeer(null);
-  };
+    return peer
 
-  const handleSubmit = async () => {
-    try {
-      if (editingPeer) {
-        await api.put(`/wireguard/peers/${editingPeer.id}`, form);
-      } else {
-        await api.post('/wireguard/peers', form);
-      }
-      fetchPeers();
-      handleClose();
-    } catch (err) {
-      alert('Ошибка сохранения');
-    }
-  };
+@router.get("/{id}", response_model=WireGuardPeerOut)
+def read_peer(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_superuser)
+):
+    peer = wireguard_peer.get(db, id=id)
+    if not peer:
+        raise HTTPException(status_code=404, detail="Peer not found")
+    return peer
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm('Удалить пир?')) {
-      await api.delete(`/wireguard/peers/${id}`);
-      fetchPeers();
-    }
-  };
+@router.put("/{id}", response_model=WireGuardPeerOut)
+def update_peer(
+    id: int,
+    peer_in: WireGuardPeerUpdate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_superuser)
+):
+    peer = wireguard_peer.get(db, id=id)
+    if not peer:
+        raise HTTPException(status_code=404, detail="Peer not found")
+    # Обновляем в БД
+    peer = wireguard_peer.update(db, db_obj=peer, obj_in=peer_in)
+    # В реальном обновлении WireGuard нужно удалить старый пир и добавить заново, если изменился ключ или allowed_ips.
+    # Для простоты реализуем только обновление allowed_ips и endpoint через повторное добавление.
+    # Упростим: удалим и добавим заново.
+    try:
+        remove_peer(peer.public_key)
+        add_peer(peer.public_key, peer.allowed_ips, peer.endpoint)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update peer in WireGuard: {e}")
+    return peer
 
-  return (
-    <Box>
-      <Typography variant="h4" gutterBottom>WireGuard Peers</Typography>
-      <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpen()} sx={{ mb: 2 }}>
-        Добавить пир
-      </Button>
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>ID</TableCell>
-              <TableCell>NAS устройство</TableCell>
-              <TableCell>Публичный ключ</TableCell>
-              <TableCell>Allowed IPs</TableCell>
-              <TableCell>Endpoint</TableCell>
-              <TableCell>Статус</TableCell>
-              <TableCell>Действия</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {peers.map((peer) => {
-              const nas = nasDevices.find(d => d.id === peer.nas_device_id);
-              return (
-                <TableRow key={peer.id}>
-                  <TableCell>{peer.id}</TableCell>
-                  <TableCell>{nas?.name || peer.nas_device_id}</TableCell>
-                  <TableCell>{peer.public_key.substring(0, 20)}…</TableCell>
-                  <TableCell>{peer.allowed_ips}</TableCell>
-                  <TableCell>{peer.endpoint}</TableCell>
-                  <TableCell>
-                    <Chip label={peer.is_active ? 'Активен' : 'Неактивен'} color={peer.is_active ? 'success' : 'default'} size="small" />
-                  </TableCell>
-                  <TableCell>
-                    <IconButton size="small" onClick={() => handleOpen(peer)}><EditIcon /></IconButton>
-                    <IconButton size="small" onClick={() => handleDelete(peer.id)}><DeleteIcon /></IconButton>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      <Dialog open={dialogOpen} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle>{editingPeer ? 'Редактировать пир' : 'Новый пир'}</DialogTitle>
-        <DialogContent>
-          <TextField
-            select
-            margin="dense"
-            label="NAS устройство"
-            fullWidth
-            value={form.nas_device_id}
-            onChange={(e) => setForm({ ...form, nas_device_id: parseInt(e.target.value) })}
-            SelectProps={{ native: true }}
-          >
-            <option value={0}>Выберите...</option>
-            {nasDevices.map(dev => (
-              <option key={dev.id} value={dev.id}>{dev.name} ({dev.ip_address})</option>
-            ))}
-          </TextField>
-          <TextField
-            margin="dense"
-            label="Публичный ключ"
-            fullWidth
-            multiline
-            rows={2}
-            value={form.public_key}
-            onChange={(e) => setForm({ ...form, public_key: e.target.value })}
-          />
-          <TextField
-            margin="dense"
-            label="Allowed IPs"
-            fullWidth
-            value={form.allowed_ips}
-            onChange={(e) => setForm({ ...form, allowed_ips: e.target.value })}
-            placeholder="192.168.99.2/32"
-          />
-          <TextField
-            margin="dense"
-            label="Endpoint"
-            fullWidth
-            value={form.endpoint}
-            onChange={(e) => setForm({ ...form, endpoint: e.target.value })}
-            placeholder="10.0.0.2:51820"
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Отмена</Button>
-          <Button onClick={handleSubmit} variant="contained">Сохранить</Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
-  );
-}
+@router.delete("/{id}", response_model=WireGuardPeerOut)
+def delete_peer(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_superuser)
+):
+    peer = wireguard_peer.get(db, id=id)
+    if not peer:
+        raise HTTPException(status_code=404, detail="Peer not found")
+    # Удаляем из WireGuard
+    try:
+        remove_peer(peer.public_key)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to remove peer from WireGuard: {e}")
+    # Мягкое удаление в БД
+    peer = wireguard_peer.remove(db, id=id)
+    return peer

@@ -6,6 +6,7 @@ from app.crud.wireguard_peer import wireguard_peer
 from app.schemas.wireguard_peer import WireGuardPeerCreate, WireGuardPeerUpdate, WireGuardPeerOut
 from app.core.dependencies import get_current_superuser
 from app.core.wireguard import add_peer, remove_peer
+from app.crud.nas_device import nas_device as crud_nas  # импорт для проверки
 
 router = APIRouter()
 
@@ -24,12 +25,19 @@ def create_peer(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_superuser)
 ):
+    # Проверяем, существует ли NAS-устройство с таким ID
+    nas_device = crud_nas.get(db, id=peer_in.nas_device_id)
+    if not nas_device:
+        raise HTTPException(status_code=404, detail="NAS device not found")
+
     # Проверяем, нет ли уже пира для этого NASDevice
     existing = wireguard_peer.get_by_nas_device(db, peer_in.nas_device_id)
     if existing:
         raise HTTPException(status_code=400, detail="Peer already exists for this NAS device")
+
     # Создаём запись в БД
     peer = wireguard_peer.create(db, obj_in=peer_in)
+
     # Добавляем в WireGuard
     try:
         add_peer(peer.public_key, peer.allowed_ips, peer.endpoint)
@@ -37,6 +45,7 @@ def create_peer(
         # Если ошибка, удаляем запись из БД и возвращаем ошибку
         wireguard_peer.remove(db, id=peer.id)
         raise HTTPException(status_code=500, detail=f"Failed to add peer to WireGuard: {e}")
+
     return peer
 
 @router.get("/{id}", response_model=WireGuardPeerOut)

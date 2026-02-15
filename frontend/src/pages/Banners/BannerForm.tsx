@@ -31,7 +31,7 @@ export default function BannerForm({ open, onClose, onSaved, bannerId }: BannerF
     is_active: true,
   });
   const [venues, setVenues] = useState<Venue[]>([]);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
 
@@ -56,12 +56,22 @@ export default function BannerForm({ open, onClose, onSaved, bannerId }: BannerF
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => ({ ...prev, [name]: value === '' ? null : value }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
   const handleCheckbox = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, is_active: e.target.checked }));
+  };
+
+  const cleanForm = (data: BannerFormValues) => {
+    const result: any = {};
+    for (const key in data) {
+      if (data[key as keyof BannerFormValues] !== null) {
+        result[key] = data[key as keyof BannerFormValues];
+      }
+    }
+    return result;
   };
 
   const handleSubmit = async () => {
@@ -72,15 +82,15 @@ export default function BannerForm({ open, onClose, onSaved, bannerId }: BannerF
       setLoading(true);
       setApiError('');
       if (bannerId) {
-        await updateBanner(bannerId, form);
+        await updateBanner(bannerId, cleanForm(form));
       } else {
-        await createBanner(form);
+        await createBanner(cleanForm(form));
       }
       onSaved();
       onClose();
     } catch (err: any) {
       if (err.name === 'ValidationError') {
-        const validationErrors: Record<string, string> = {};
+        const validationErrors: Record<string, string | undefined> = {};
         err.inner.forEach((e: any) => {
           if (e.path) validationErrors[e.path] = e.message;
         });

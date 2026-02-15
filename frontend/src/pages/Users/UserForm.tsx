@@ -33,7 +33,7 @@ export default function UserForm({ open, onClose, onSaved, userId }: UserFormPro
     is_superuser: false,
   });
   const [venues, setVenues] = useState<Venue[]>([]);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
 
@@ -68,6 +68,21 @@ export default function UserForm({ open, onClose, onSaved, userId }: UserFormPro
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.checked }));
   };
 
+  const cleanForm = (data: UserFormValues) => {
+    const result: any = {};
+    for (const key in data) {
+      const value = data[key as keyof UserFormValues];
+      if (value !== null && value !== '') {
+        result[key] = value;
+      }
+    }
+    // При редактировании не отправляем пароль, если он не был изменён
+    if (userId && !data.password) {
+      delete result.password;
+    }
+    return result;
+  };
+
   const handleSubmit = async () => {
     try {
       await userSchema.validate(form, {
@@ -79,16 +94,15 @@ export default function UserForm({ open, onClose, onSaved, userId }: UserFormPro
       setLoading(true);
       setApiError('');
       if (userId) {
-        const { password, ...rest } = form;
-        await updateUser(userId, rest);
+        await updateUser(userId, cleanForm(form));
       } else {
-        await createUser(form);
+        await createUser(cleanForm(form));
       }
       onSaved();
       onClose();
     } catch (err: any) {
       if (err.name === 'ValidationError') {
-        const validationErrors: Record<string, string> = {};
+        const validationErrors: Record<string, string | undefined> = {};
         err.inner.forEach((e: any) => {
           if (e.path) validationErrors[e.path] = e.message;
         });

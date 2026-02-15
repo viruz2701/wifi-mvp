@@ -1,16 +1,12 @@
 import { useState, useEffect } from 'react';
 import {
-  Grid, Card, CardContent, Typography, Box,
-  FormControl, InputLabel, Select, MenuItem, Button,
+  Box, Card, CardContent, Typography,
+  FormControl, InputLabel, Select, MenuItem,
   Alert, CircularProgress
 } from '@mui/material';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { ru } from 'date-fns/locale';
 import { format, subDays } from 'date-fns';
 import api from '@/api/axios';
-import { useAuth } from '@/hooks/useAuth';
 
 interface Metrics {
   unique_users: number;
@@ -21,7 +17,6 @@ interface Metrics {
 }
 
 export default function Dashboard() {
-  const { user } = useAuth();
   const [period, setPeriod] = useState<'today' | 'week' | 'month'>('today');
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [chartData, setChartData] = useState<any[]>([]);
@@ -69,24 +64,24 @@ export default function Dashboard() {
           <MenuItem value="month">Месяц</MenuItem>
         </Select>
       </FormControl>
-      <Grid container spacing={3}>
-        <Grid item xs={12} sm={6} md={3}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+        <Box sx={{ flex: { xs: '0 0 100%', sm: '0 0 calc(50% - 12px)', md: '0 0 calc(25% - 18px)' } }}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>Уникальные пользователи</Typography>
               <Typography variant="h5">{metrics?.unique_users ?? '-'}</Typography>
             </CardContent>
           </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        </Box>
+        <Box sx={{ flex: { xs: '0 0 100%', sm: '0 0 calc(50% - 12px)', md: '0 0 calc(25% - 18px)' } }}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>Новые сессии</Typography>
               <Typography variant="h5">{metrics?.new_sessions ?? '-'}</Typography>
             </CardContent>
           </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        </Box>
+        <Box sx={{ flex: { xs: '0 0 100%', sm: '0 0 calc(50% - 12px)', md: '0 0 calc(25% - 18px)' } }}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>Трафик (МБ)</Typography>
@@ -95,8 +90,8 @@ export default function Dashboard() {
               </Typography>
             </CardContent>
           </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        </Box>
+        <Box sx={{ flex: { xs: '0 0 100%', sm: '0 0 calc(50% - 12px)', md: '0 0 calc(25% - 18px)' } }}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>SMS отправлено/подтверждено</Typography>
@@ -105,8 +100,8 @@ export default function Dashboard() {
               </Typography>
             </CardContent>
           </Card>
-        </Grid>
-        <Grid item xs={12}>
+        </Box>
+        <Box sx={{ flex: '0 0 100%' }}>
           <Card>
             <CardContent>
               <Typography variant="h6">Активность за последние 30 дней</Typography>
@@ -123,8 +118,8 @@ export default function Dashboard() {
               </ResponsiveContainer>
             </CardContent>
           </Card>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
     </Box>
   );
 }

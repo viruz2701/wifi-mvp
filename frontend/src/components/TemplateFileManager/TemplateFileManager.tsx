@@ -6,12 +6,11 @@ import {
   IconButton,
   Typography,
   Box,
-  Button,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Chip,
+  Button
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -20,7 +19,6 @@ import api from '@/api/axios';
 
 interface TemplateFileManagerProps {
   templateId: number;
-  venueId: number;
   initialCss?: string[];
   initialJs?: string[];
   initialImages?: string[];
@@ -29,7 +27,6 @@ interface TemplateFileManagerProps {
 
 export default function TemplateFileManager({
   templateId,
-  venueId,
   initialCss = [],
   initialJs = [],
   initialImages = [],
@@ -58,7 +55,6 @@ export default function TemplateFileManager({
 
   const handleDelete = async (type: 'css' | 'js' | 'image', filePath: string) => {
     if (!window.confirm('Удалить файл?')) return;
-
     try {
       await api.delete(`/portal-templates/${templateId}/files`, {
         params: { file_path: filePath },
@@ -85,16 +81,19 @@ export default function TemplateFileManager({
       />
       <List dense>
         {files.map((file) => (
-          <ListItem key={file} secondaryAction={
-            <>
-              <IconButton edge="end" onClick={() => { setPreviewUrl(file); setPreviewOpen(true); }}>
-                <VisibilityIcon />
-              </IconButton>
-              <IconButton edge="end" onClick={() => handleDelete(type, file)}>
-                <DeleteIcon />
-              </IconButton>
-            </>
-          }>
+          <ListItem
+            key={file}
+            secondaryAction={
+              <>
+                <IconButton edge="end" onClick={() => { setPreviewUrl(file); setPreviewOpen(true); }}>
+                  <VisibilityIcon />
+                </IconButton>
+                <IconButton edge="end" onClick={() => handleDelete(type, file)}>
+                  <DeleteIcon />
+                </IconButton>
+              </>
+            }
+          >
             <ListItemText primary={file.split('/').pop()} />
           </ListItem>
         ))}
@@ -113,10 +112,8 @@ export default function TemplateFileManager({
         <DialogContent>
           {previewUrl.match(/\.(jpg|jpeg|png|gif|svg)$/i) ? (
             <img src={previewUrl} alt="preview" style={{ maxWidth: '100%' }} />
-          ) : previewUrl.match(/\.css$/i) ? (
-            <iframe src={previewUrl} title="css preview" style={{ width: '100%', height: '400px' }} />
           ) : (
-            <iframe src={previewUrl} title="js preview" style={{ width: '100%', height: '400px' }} />
+            <iframe src={previewUrl} title="preview" style={{ width: '100%', height: '400px' }} />
           )}
         </DialogContent>
         <DialogActions>

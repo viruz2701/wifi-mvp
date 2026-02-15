@@ -25,7 +25,7 @@ export default function ProfileEditDialog({ open, onClose, onSaved, profileId, i
     is_blocked: false,
     is_vip: false,
   });
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
 
@@ -58,7 +58,7 @@ export default function ProfileEditDialog({ open, onClose, onSaved, profileId, i
       onClose();
     } catch (err: any) {
       if (err.name === 'ValidationError') {
-        const validationErrors: Record<string, string> = {};
+        const validationErrors: Record<string, string | undefined> = {};
         err.inner.forEach((e: any) => {
           if (e.path) validationErrors[e.path] = e.message;
         });

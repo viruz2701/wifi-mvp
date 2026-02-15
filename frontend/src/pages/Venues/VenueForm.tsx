@@ -31,7 +31,7 @@ export default function VenueForm({ open, onClose, onSaved, venueId }: VenueForm
     is_active: true,
     ssl_enabled: false,
   });
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
 
@@ -56,30 +56,38 @@ export default function VenueForm({ open, onClose, onSaved, venueId }: VenueForm
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-    setForm((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
-    // Очищаем ошибку для этого поля при изменении
+    setForm((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value === '' ? null : value }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
+  };
+
+  const cleanForm = (data: VenueFormValues) => {
+    const result: any = {};
+    for (const key in data) {
+      const value = data[key as keyof VenueFormValues];
+      if (value !== null) {
+        result[key] = value;
+      }
+    }
+    return result;
   };
 
   const handleSubmit = async () => {
     try {
-      // Валидация через Yup
       await venueSchema.validate(form, { abortEarly: false });
-      setErrors({}); // очищаем ошибки
+      setErrors({});
 
       setLoading(true);
       setApiError('');
       if (venueId) {
-        await api.put(`/venues/${venueId}`, form);
+        await api.put(`/venues/${venueId}`, cleanForm(form));
       } else {
-        await api.post('/venues', form);
+        await api.post('/venues', cleanForm(form));
       }
       onSaved();
       onClose();
     } catch (err: any) {
       if (err.name === 'ValidationError') {
-        // Обработка ошибок Yup
-        const validationErrors: Record<string, string> = {};
+        const validationErrors: Record<string, string | undefined> = {};
         err.inner.forEach((e: any) => {
           if (e.path) validationErrors[e.path] = e.message;
         });

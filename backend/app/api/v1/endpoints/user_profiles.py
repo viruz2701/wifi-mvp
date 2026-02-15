@@ -6,6 +6,7 @@ from app.crud.user_profile import user_profile
 from app.schemas.user_profile import UserProfileCreate, UserProfileUpdate, UserProfileOut
 from app.core.dependencies import get_current_superuser, get_current_active_user
 from app.models.user import User
+from app.models.user_profile import UserProfile
 
 router = APIRouter()
 

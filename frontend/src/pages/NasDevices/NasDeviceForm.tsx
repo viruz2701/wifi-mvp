@@ -37,7 +37,7 @@ export default function NasDeviceForm({ open, onClose, onSaved, deviceId }: NasD
     is_active: true,
   });
   const [venues, setVenues] = useState<Venue[]>([]);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
 
@@ -48,7 +48,8 @@ export default function NasDeviceForm({ open, onClose, onSaved, deviceId }: NasD
   useEffect(() => {
     if (open && deviceId) {
       getNasDevice(deviceId).then(res => {
-        setForm(res.data);
+        // API возвращает данные без секрета, поэтому устанавливаем secret в пустую строку
+        setForm({ ...res.data, secret: '' });
       }).catch(() => setApiError('Ошибка загрузки данных'));
     } else if (open) {
       setForm({
@@ -76,6 +77,21 @@ export default function NasDeviceForm({ open, onClose, onSaved, deviceId }: NasD
     setForm((prev) => ({ ...prev, is_active: e.target.checked }));
   };
 
+  const cleanForm = (data: NasDeviceFormValues) => {
+    const result: any = {};
+    for (const key in data) {
+      const value = data[key as keyof NasDeviceFormValues];
+      if (value !== null && value !== '') {
+        result[key] = value;
+      }
+    }
+    // При редактировании, если secret не указан, не отправляем его
+    if (deviceId && !data.secret) {
+      delete result.secret;
+    }
+    return result;
+  };
+
   const handleSubmit = async () => {
     try {
       await nasDeviceSchema.validate(form, { abortEarly: false });
@@ -84,15 +100,15 @@ export default function NasDeviceForm({ open, onClose, onSaved, deviceId }: NasD
       setLoading(true);
       setApiError('');
       if (deviceId) {
-        await updateNasDevice(deviceId, form);
+        await updateNasDevice(deviceId, cleanForm(form));
       } else {
-        await createNasDevice(form);
+        await createNasDevice(cleanForm(form));
       }
       onSaved();
       onClose();
     } catch (err: any) {
       if (err.name === 'ValidationError') {
-        const validationErrors: Record<string, string> = {};
+        const validationErrors: Record<string, string | undefined> = {};
         err.inner.forEach((e: any) => {
           if (e.path) validationErrors[e.path] = e.message;
         });
@@ -166,7 +182,7 @@ export default function NasDeviceForm({ open, onClose, onSaved, deviceId }: NasD
           onChange={handleChange}
           error={!!errors.secret}
           helperText={errors.secret}
-          required
+          required={!deviceId} // обязателен только при создании
         />
         <TextField
           margin="dense"

@@ -18,7 +18,7 @@ def add_peer(public_key: str, allowed_ips: str, endpoint: str = None):
     cmd = ["wg", "set", WG_INTERFACE, "peer", public_key, "allowed-ips", allowed_ips]
     if endpoint:
         cmd += ["endpoint", endpoint]
-    _run_wg_cmd(*cmd[2:])  # убираем "wg" из начала
+    _run_wg_cmd(*cmd[1:])  # убираем "wg" из начала
     # Также нужно добавить пир в конфигурационный файл для сохранения при перезагрузке
     _append_peer_to_config(public_key, allowed_ips, endpoint)
 

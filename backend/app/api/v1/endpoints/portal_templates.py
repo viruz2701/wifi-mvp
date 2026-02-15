@@ -44,6 +44,15 @@ def create_template(
         raise HTTPException(status_code=404, detail="Venue not found")
     return crud_template.create(db, obj_in=template_in)
 
+@router.post("", response_model=PortalTemplateOut)
+def create_template_without_slash(
+    template_in: PortalTemplateCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+):
+    """Создать новый шаблон (без слеша в URL)"""
+    return create_template(template_in, db, current_user)
+
 @router.post("/{id}/upload")
 async def upload_template_file(
     id: int,

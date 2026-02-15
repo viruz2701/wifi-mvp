@@ -10,17 +10,13 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         return db.query(User).filter(User.email == email).first()
 
     def create(self, db: Session, *, obj_in: UserCreate) -> User:
-        # Отладочная информация
-        print("Password from obj_in:", repr(obj_in.password))
-        print("Password type:", type(obj_in.password))
-        print("Password length:", len(obj_in.password))
-
         db_obj = User(
             email=obj_in.email,
             hashed_password=get_password_hash(obj_in.password),
             is_active=obj_in.is_active,
             is_superuser=obj_in.is_superuser,
             role=obj_in.role,
+            venue_id=obj_in.venue_id,
         )
         db.add(db_obj)
         db.commit()
@@ -35,9 +31,15 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             return None
         return user
 
+    # Переопределяем get – без фильтра по deleted_at
+    def get(self, db: Session, id: int) -> Optional[User]:
+        return db.query(self.model).filter(self.model.id == id).first()
+
+    # Переопределяем get_multi – без фильтра по deleted_at
     def get_multi(self, db: Session, *, skip: int = 0, limit: int = 100):
         return db.query(self.model).offset(skip).limit(limit).all()
 
+    # Переопределяем remove – физическое удаление
     def remove(self, db: Session, *, id: int):
         obj = db.query(self.model).get(id)
         if obj:

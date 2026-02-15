@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Paper, Box, CircularProgress, Alert } from '@mui/material';
+import { Paper, CircularProgress, Alert } from '@mui/material';
 import api from '@/api/axios';
 
 interface TemplatePreviewProps {
@@ -33,8 +33,10 @@ export default function TemplatePreview({ templateId, venueId, htmlContent, file
           dst: 'http://example.com',
           year: '2026',
         };
-        // простая замена макросов (можно использовать ту же функцию, что на бэке)
-        html = html.replace(/\$\((\w+)\)/g, (_, key) => context[key] || `$(${key})`);
+        html = html.replace(/\$\((\w+)\)/g, (_, key) => {
+          const k = key as keyof typeof context;
+          return context[k] || `$(${key})`;
+        });
         setPreviewHtml(html);
         return;
       }

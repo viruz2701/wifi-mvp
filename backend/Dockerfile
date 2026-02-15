@@ -1,5 +1,11 @@
 FROM python:3.11-slim
 
+# Установка системных зависимостей, включая wireguard-tools и iproute2
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wireguard-tools \
+    iproute2 \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 COPY requirements.txt .

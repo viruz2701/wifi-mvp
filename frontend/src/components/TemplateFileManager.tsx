@@ -1,24 +1,21 @@
 import { useState } from 'react';
-import { Box, Typography, List, ListItem, ListItemText, IconButton, Paper, Stack, Alert, LinearProgress } from '@mui/material';
+import { Box, Typography, List, ListItem, ListItemText, IconButton, Paper, Alert } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import FileUploader from './FileUploader';
 import api from '@/api/axios';
 
 interface TemplateFileManagerProps {
   templateId: number;
-  files: string[];          // массив путей к файлам
+  files: string[];
   fileType: 'css' | 'js' | 'images';
   onFilesChanged: (newFiles: string[]) => void;
 }
 
 export default function TemplateFileManager({ templateId, files, fileType, onFilesChanged }: TemplateFileManagerProps) {
-  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
 
   const handleUploadSuccess = (fileUrl: string) => {
     onFilesChanged([...files, fileUrl]);
-    setUploading(false);
   };
 
   const handleDelete = async (filePath: string) => {

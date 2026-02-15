@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { IconButton, Stack, Typography, Chip, TextField, Button, Box } from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
 import BlockIcon from '@mui/icons-material/Block';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { getUserProfiles, updateUserProfile } from '@/api/userProfiles';

@@ -35,7 +35,7 @@ export default function TemplateForm({ open, onClose, onSaved, templateId }: Tem
     images: [],
     is_active: true,
   });
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
 
@@ -87,7 +87,7 @@ export default function TemplateForm({ open, onClose, onSaved, templateId }: Tem
       onClose();
     } catch (err: any) {
       if (err.name === 'ValidationError') {
-        const validationErrors: Record<string, string> = {};
+        const validationErrors: Record<string, string | undefined> = {};
         err.inner.forEach((e: any) => {
           if (e.path) validationErrors[e.path] = e.message;
         });
@@ -158,10 +158,9 @@ export default function TemplateForm({ open, onClose, onSaved, templateId }: Tem
           {templateId ? (
             <TemplateFileManager
               templateId={templateId}
-              venueId={form.venue_id}
-              initialCss={form.css_files}
-              initialJs={form.js_files}
-              initialImages={form.images}
+              initialCss={form.css_files?.filter((f): f is string => f !== undefined) || []}
+              initialJs={form.js_files?.filter((f): f is string => f !== undefined) || []}
+              initialImages={form.images?.filter((f): f is string => f !== undefined) || []}
               onUpdate={handleFilesUpdate}
             />
           ) : (

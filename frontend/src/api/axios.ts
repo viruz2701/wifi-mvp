@@ -23,7 +23,6 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-
 api.interceptors.response.use(
   (response) => {
     console.log('🟢 Response:', {
@@ -38,6 +37,17 @@ api.interceptors.response.use(
       status: error.response?.status,
       message: error.message
     });
+    
+    // Если сервер вернул 401 (неавторизован), очищаем токен и перенаправляем на логин
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      // Проверяем, что код выполняется в браузере (для совместимости с SSR)
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
+    }
+    
     return Promise.reject(error);
   }
 );
