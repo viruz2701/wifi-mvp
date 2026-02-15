@@ -1,5 +1,7 @@
 import librouteros
 from .interface import NASInterface
+import asyncio
+
 
 class MikrotikNAS(NASInterface):
     def __init__(self, host: str, username: str, password: str, port: int = 8728):
@@ -9,10 +11,40 @@ class MikrotikNAS(NASInterface):
         self.port = port
         self.api = None
 
+    async def reboot(self) -> bool:
+        """Перезагрузка устройства."""
+        if not self.api:
+            await self.connect()
+        try:
+            await asyncio.to_thread(self.api, '/system/reboot')
+            return True
+        except Exception as e:
+            print(f"Reboot failed: {e}")
+            return False
+
+    async def disconnect_all_sessions(self) -> bool:
+        """Принудительное завершение всех сессий клиентов."""
+        if not self.api:
+            await self.connect()
+        try:
+            # Получаем все активные соединения
+            connections = await asyncio.to_thread(
+                self.api, '/ip/firewall/connection/print'
+            )
+            for conn in connections:
+                await asyncio.to_thread(
+                    self.api, '/ip/firewall/connection/remove',
+                    {'.id': conn['.id']}
+                )
+            return True
+        except Exception as e:
+            print(f"Disconnect all sessions failed: {e}")
+            return False    
+
     async def connect(self):
         """Устанавливаем соединение (синхронное, но можно обернуть в поток)."""
         # librouteros синхронный, для асинхронности используем asyncio.to_thread
-        import asyncio
+        
         self.api = await asyncio.to_thread(
             librouteros.connect,
             host=self.host,

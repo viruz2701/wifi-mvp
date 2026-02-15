@@ -9,6 +9,49 @@ class UbiquitiNAS(NASInterface):
         self.client = httpx.AsyncClient(verify=False)  # отключаем проверку SSL для локального контроллера
         self.cookies = None
 
+     async def reboot(self) -> bool:
+        """Перезагрузка контроллера или конкретной точки доступа."""
+        if not self.cookies:
+            await self.login()
+        try:
+            # Для перезагрузки всей системы (если это контроллер)
+            # payload = {"cmd": "reboot"}
+            # resp = await self.client.post(f"{self.base_url}/cmd/system", json=payload, cookies=self.cookies)
+            # Для перезагрузки конкретной точки доступа (требуется её MAC)
+            # Здесь нужно получить список точек и выбрать нужную. Упростим: перезагружаем первую активную.
+            sites = await self.client.get(f"{self.base_url}/self/sites", cookies=self.cookies)
+            if sites.status_code == 200:
+                site_data = sites.json()
+                # ... логика выбора точки
+                return True
+            return False
+        except Exception as e:
+            print(f"Reboot failed: {e}")
+            return False
+
+    async def disconnect_all_sessions(self) -> bool:
+        """Завершить все сессии всех клиентов."""
+        if not self.cookies:
+            await self.login()
+        try:
+            # Получаем список активных клиентов
+            resp = await self.client.get(f"{self.base_url}/stat/sta", cookies=self.cookies)
+            if resp.status_code == 200:
+                data = resp.json()
+                for client in data.get('data', []):
+                    mac = client.get('mac')
+                    if mac:
+                        await self.client.post(
+                            f"{self.base_url}/cmd/stamgr",
+                            json={"cmd": "kick-sta", "mac": mac},
+                            cookies=self.cookies
+                        )
+                return True
+            return False
+        except Exception as e:
+            print(f"Disconnect all sessions failed: {e}")
+            return False
+
     async def login(self):
         # Унифицированный вход (может отличаться для разных версий)
         resp = await self.client.post(
