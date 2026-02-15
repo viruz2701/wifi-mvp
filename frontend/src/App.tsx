@@ -9,6 +9,9 @@ import NasDevicesPage from './pages/NasDevices';
 import UserProfilesPage from './pages/UserProfiles';
 import UsersPage from './pages/Users';
 import BannersPage from './pages/Banners';
+import Dashboard from './pages/Dashboard';
+import DataAudit from './pages/DataAudit';
+
 
 
 
@@ -27,7 +30,9 @@ function App() {
         >
           <Route index element={<Navigate to="/venues" replace />} />
           <Route path="venues" element={<VenuesPage />} />
+          <Route path="data-audit" element={<DataAudit />} />
           
+          <Route path="dashboard" element={<Dashboard />} />
           <Route path="nas-devices" element={<NasDevicesPage />} />
           <Route path="banners" element={<BannersPage />} />
           <Route path="user-profiles" element={<UserProfilesPage />} />

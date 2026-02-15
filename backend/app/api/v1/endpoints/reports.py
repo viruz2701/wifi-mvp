@@ -109,6 +109,65 @@ def top_users_report(
     return [{"mac": r.mac_address, "phone": r.phone_number,
              "total_traffic_bytes": r.total_traffic, "total_sessions": r.total_sessions} for r in top_traffic]
 
+
+@router.get("/dashboard-metrics")
+def dashboard_metrics(
+    period: str = Query("today", regex="^(today|week|month)$"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    venue_ids = get_venue_ids_for_user(current_user, db, None)
+    now = datetime.utcnow()
+    if period == "today":
+        start = datetime(now.year, now.month, now.day)
+    elif period == "week":
+        start = now - timedelta(days=7)
+    else:  # month
+        start = now - timedelta(days=30)
+
+    # Уникальные пользователи
+    unique_users = db.query(func.count(func.distinct(DBSession.user_profile_id))).filter(
+        DBSession.venue_id.in_(venue_ids),
+        DBSession.session_start >= start,
+        DBSession.deleted_at.is_(None)
+    ).scalar() or 0
+
+    # Новые сессии
+    new_sessions = db.query(func.count(DBSession.id)).filter(
+        DBSession.venue_id.in_(venue_ids),
+        DBSession.session_start >= start,
+        DBSession.deleted_at.is_(None)
+    ).scalar() or 0
+
+    # Трафик
+    traffic = db.query(func.sum(DBSession.traffic_in_bytes + DBSession.traffic_out_bytes)).filter(
+        DBSession.venue_id.in_(venue_ids),
+        DBSession.session_start >= start,
+        DBSession.deleted_at.is_(None)
+    ).scalar() or 0
+
+    # SMS отправлено и подтверждено
+    sms_sent = db.query(func.count(SMSCode.id)).filter(
+        SMSCode.venue_id.in_(venue_ids),
+        SMSCode.created_at >= start,
+        SMSCode.deleted_at.is_(None)
+    ).scalar() or 0
+
+    sms_confirmed = db.query(func.count(SMSCode.id)).filter(
+        SMSCode.venue_id.in_(venue_ids),
+        SMSCode.created_at >= start,
+        SMSCode.is_used == True,
+        SMSCode.deleted_at.is_(None)
+    ).scalar() or 0
+
+    return {
+        "unique_users": unique_users,
+        "new_sessions": new_sessions,
+        "total_traffic_bytes": traffic,
+        "sms_sent": sms_sent,
+        "sms_confirmed": sms_confirmed
+    }
+
 @router.get("/devices")
 def devices_report(
     db: Session = Depends(get_db),
