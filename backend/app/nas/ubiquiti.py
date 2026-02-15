@@ -9,8 +9,48 @@ class UbiquitiNAS(NASInterface):
         self.client = httpx.AsyncClient(verify=False)  # отключаем проверку SSL для локального контроллера
         self.cookies = None
 
-     async def reboot(self) -> bool:
-        """Перезагрузка контроллера или конкретной точки доступа."""
+    async def login(self):
+        """Авторизация в UniFi Controller."""
+        resp = await self.client.post(
+            f"{self.base_url}/login",
+            json={"username": self.username, "password": self.password}
+        )
+        if resp.status_code == 200:
+            self.cookies = resp.cookies
+            return True
+        return False
+
+    async def get_client_name(self, mac: str) -> str | None:
+        """Получить имя клиента по MAC-адресу."""
+        if not self.cookies:
+            await self.login()
+        resp = await self.client.get(
+            f"{self.base_url}/stat/sta/{mac}",
+            cookies=self.cookies
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            if data.get('meta', {}).get('rc') == 'ok' and data.get('data'):
+                return data['data'][0].get('name')
+        return None
+
+    async def disconnect_session(self, mac: str) -> bool:
+        """Принудительно завершить сессию клиента."""
+        if not self.cookies:
+            await self.login()
+        payload = {
+            "cmd": "kick-sta",
+            "mac": mac
+        }
+        resp = await self.client.post(
+            f"{self.base_url}/cmd/stamgr",
+            json=payload,
+            cookies=self.cookies
+        )
+        return resp.status_code == 200
+
+    async def reboot(self) -> bool:
+        """Перезагрузка контроллера (или конкретной точки доступа)."""
         if not self.cookies:
             await self.login()
         try:
@@ -51,44 +91,3 @@ class UbiquitiNAS(NASInterface):
         except Exception as e:
             print(f"Disconnect all sessions failed: {e}")
             return False
-
-    async def login(self):
-        # Унифицированный вход (может отличаться для разных версий)
-        resp = await self.client.post(
-            f"{self.base_url}/login",
-            json={"username": self.username, "password": self.password}
-        )
-        if resp.status_code == 200:
-            self.cookies = resp.cookies
-            return True
-        return False
-
-    async def get_client_name(self, mac: str) -> str | None:
-        if not self.cookies:
-            await self.login()
-        # Ищем клиента по MAC
-        resp = await self.client.get(
-            f"{self.base_url}/stat/sta/{mac}",
-            cookies=self.cookies
-        )
-        if resp.status_code == 200:
-            data = resp.json()
-            if data.get('meta', {}).get('rc') == 'ok' and data.get('data'):
-                return data['data'][0].get('name')
-        return None
-
-    async def disconnect_session(self, mac: str) -> bool:
-        if not self.cookies:
-            await self.login()
-        # Для отключения клиента нужно отправить запрос на завершение сессии
-        # Это зависит от версии UniFi, обычно POST /cmd/stamgr с параметрами
-        payload = {
-            "cmd": "kick-sta",
-            "mac": mac
-        }
-        resp = await self.client.post(
-            f"{self.base_url}/cmd/stamgr",
-            json=payload,
-            cookies=self.cookies
-        )
-        return resp.status_code == 200

@@ -19,3 +19,4 @@ asyncssh==2.14.1
 email-validator==2.0.0
 python-multipart==0.0.6
 bcrypt==3.2.0
+prometheus-fastapi-instrumentator==6.1.0

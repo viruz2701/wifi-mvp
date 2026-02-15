@@ -8,6 +8,7 @@ from app.crud.user import user as crud_user
 from app.schemas.token import TokenData
 from app.models.user import User
 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")   
 
 async def get_current_user_optional(
     db: Session = Depends(get_db),
@@ -18,7 +19,7 @@ async def get_current_user_optional(
     except HTTPException:
         return None
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+
 
 async def get_current_user(
     db: Session = Depends(get_db),
@@ -69,3 +70,12 @@ async def get_current_venue_owner(current_user: User = Depends(get_current_activ
     if current_user.is_superuser or current_user.role == "admin":
         return current_user
     raise HTTPException(status_code=403, detail="Venue owner or admin required")
+
+async def get_current_venue_owner_or_admin(
+    current_user: User = Depends(get_current_active_user)
+) -> User:
+    if current_user.is_superuser or current_user.role == "admin":
+        return current_user
+    if current_user.role == "venue_owner" and current_user.venue_id:
+        return current_user
+    raise HTTPException(status_code=403, detail="Not enough permissions")
