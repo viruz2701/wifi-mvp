@@ -12,6 +12,7 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { useAuth } from '@/hooks/useAuth';
+import VpnKeyIcon from '@mui/icons-material/VpnKey';
 
 const drawerWidth = 240;
 
@@ -22,15 +23,18 @@ export default function Layout() {
 
   const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
 
-  const menuItems = [
-    { text: 'Площадки', icon: <LocationCityIcon />, path: '/venues', roles: ['admin', 'venue_owner'] },
-    { text: 'NAS-устройства', icon: <RouterIcon />, path: '/nas-devices', roles: ['admin', 'venue_owner'] },
-    { text: 'Шаблоны портала', icon: <WebIcon />, path: '/portal-templates', roles: ['admin'] },
-    { text: 'Баннеры', icon: <ImageIcon />, path: '/banners', roles: ['admin', 'marketing'] },
-    { text: 'Пользователи Wi-Fi', icon: <PeopleIcon />, path: '/user-profiles', roles: ['admin', 'venue_owner', 'support'] },
-    { text: 'Отчёты', icon: <AssessmentIcon />, path: '/reports', roles: ['admin', 'marketing'] },
-    { text: 'Администраторы', icon: <AdminPanelSettingsIcon />, path: '/users', roles: ['admin'] },
-  ];
+ 
+
+const menuItems = [
+  { text: 'Площадки', icon: <LocationCityIcon />, path: '/venues', roles: ['admin', 'venue_owner'] },
+  { text: 'NAS-устройства', icon: <RouterIcon />, path: '/nas-devices', roles: ['admin', 'venue_owner'] },
+  { text: 'Шаблоны портала', icon: <WebIcon />, path: '/portal-templates', roles: ['admin'] },
+  { text: 'Баннеры', icon: <ImageIcon />, path: '/banners', roles: ['admin', 'marketing'] },
+  { text: 'Пользователи Wi-Fi', icon: <PeopleIcon />, path: '/user-profiles', roles: ['admin', 'venue_owner', 'support'] },
+  { text: 'Отчёты', icon: <AssessmentIcon />, path: '/reports', roles: ['admin', 'marketing'] },
+  { text: 'Администраторы', icon: <AdminPanelSettingsIcon />, path: '/users', roles: ['admin'] },
+  { text: 'WireGuard Peers', icon: <VpnKeyIcon />, path: '/wireguard-peers', roles: ['admin'] },   // новый пункт
+];
 
   const drawer = (
     <div>
