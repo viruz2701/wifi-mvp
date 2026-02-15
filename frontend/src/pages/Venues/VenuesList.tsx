@@ -75,7 +75,12 @@ export default function VenuesList({ onEdit, onAdd }: VenuesListProps) {
           Добавить
         </Button>
       </Stack>
-      <DataGrid rows={venues} columns={columns} loading={loading} pageSizeOptions={[10, 25, 50]} />
+      <DataGrid
+        rows={venues}
+        columns={columns}
+        loading={loading}
+        pageSizeOptions={[10, 25, 50, 100]}
+      />
     </div>
   );
 }

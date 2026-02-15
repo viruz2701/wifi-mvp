@@ -5,6 +5,12 @@ import Login from './pages/Login/Login';
 import VenuesPage from './pages/Venues';
 import PortalTemplatesPage from './pages/PortalTemplates';
 import ReportsPage from './pages/Reports';
+import NasDevicesPage from './pages/NasDevices';
+import UserProfilesPage from './pages/UserProfiles';
+import UsersPage from './pages/Users';
+import BannersPage from './pages/Banners';
+
+
 
 function App() {
   return (
@@ -21,6 +27,11 @@ function App() {
         >
           <Route index element={<Navigate to="/venues" replace />} />
           <Route path="venues" element={<VenuesPage />} />
+          
+          <Route path="nas-devices" element={<NasDevicesPage />} />
+          <Route path="banners" element={<BannersPage />} />
+          <Route path="user-profiles" element={<UserProfilesPage />} />
+          <Route path="users" element={<UsersPage />} />
           <Route path="portal-templates" element={<PortalTemplatesPage />} />
           <Route path="reports" element={<ReportsPage />} />
           {/* Добавьте остальные маршруты по аналогии */}

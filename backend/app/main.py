@@ -17,10 +17,12 @@ from app.core.rate_limit import RateLimitMiddleware
 app.add_middleware(RateLimitMiddleware, calls_per_minute=60)
 
 from app.api.v1.endpoints import banners, reports
-
+from app.api.v1.endpoints import portal_templates
+# Подключаем роутеры
+app.include_router(portal_templates.router, prefix="/api/v1/portal-templates", tags=["portal_templates"])
 app.include_router(banners.router, prefix="/api/v1/banners", tags=["banners"])
 app.include_router(reports.router, prefix="/api/v1/reports", tags=["reports"])
-# Подключаем роутеры
+
 
 
 app.include_router(netflow.router, prefix="/api/v1/netflow", tags=["netflow"])

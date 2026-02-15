@@ -13,11 +13,11 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://backend:8000',  // имя сервиса из docker-compose
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
       '/portal': {
-        target: 'http://backend:8000',  // имя сервиса из docker-compose
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
     },

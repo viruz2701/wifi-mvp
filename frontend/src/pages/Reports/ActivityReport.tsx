@@ -65,13 +65,13 @@ export default function ActivityReport() {
               label="От"
               value={fromDate}
               onChange={(newValue) => setFromDate(newValue)}
-              renderInput={(params) => <TextField {...params} size="small" />}
+              slotProps={{ textField: { size: 'small' } }}
             />
             <DatePicker
               label="До"
               value={toDate}
               onChange={(newValue) => setToDate(newValue)}
-              renderInput={(params) => <TextField {...params} size="small" />}
+              slotProps={{ textField: { size: 'small' } }}
             />
           </LocalizationProvider>
           <Button variant="contained" onClick={fetchReport} disabled={loading}>

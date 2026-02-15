@@ -82,7 +82,12 @@ export default function TemplatesList({ onEdit, onAdd }: TemplatesListProps) {
           Добавить
         </Button>
       </Stack>
-      <DataGrid rows={templates} columns={columns} loading={loading} pageSizeOptions={[10, 25, 50]} />
+      <DataGrid
+        rows={templates}
+        columns={columns}
+        loading={loading}
+        pageSizeOptions={[10, 25, 50, 100]}
+      />
       {previewTemplateId && (
         <PreviewDialog
           open={previewOpen}

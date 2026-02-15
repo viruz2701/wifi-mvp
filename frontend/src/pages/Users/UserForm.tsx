@@ -70,7 +70,6 @@ export default function UserForm({ open, onClose, onSaved, userId }: UserFormPro
 
   const handleSubmit = async () => {
     try {
-      // Передаём контекст isNew, чтобы схема знала, нужно ли требовать пароль
       await userSchema.validate(form, {
         abortEarly: false,
         context: { isNew: !userId },

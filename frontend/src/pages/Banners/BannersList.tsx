@@ -30,20 +30,26 @@ export default function BannersList({ onEdit, onAdd }: BannersListProps) {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedVenue, setSelectedVenue] = useState<number>(
-    user?.role === 'admin' ? 0 : user?.venue_id || 1
-  );
+  // Инициализируем selectedVenue пустой строкой – это означает, что площадка ещё не выбрана.
+  const [selectedVenue, setSelectedVenue] = useState<number | ''>('');
 
-  // Загружаем список площадок для админа
+  // Загружаем список площадок для администратора и устанавливаем первую доступную площадку
   useEffect(() => {
     if (user?.role === 'admin') {
-      getVenues().then(res => setVenues(res.data));
+      getVenues().then(res => {
+        setVenues(res.data);
+        if (res.data.length > 0) {
+          setSelectedVenue(res.data[0].id);
+        }
+      });
+    } else if (user?.venue_id) {
+      setSelectedVenue(user.venue_id);
     }
   }, [user]);
 
-  // Загружаем баннеры при изменении выбранной площадки
+  // Загружаем баннеры только после того, как площадка выбрана
   useEffect(() => {
-    if (selectedVenue || selectedVenue === 0) {
+    if (selectedVenue !== '') {
       fetchBanners();
     }
   }, [selectedVenue]);
@@ -51,7 +57,9 @@ export default function BannersList({ onEdit, onAdd }: BannersListProps) {
   const fetchBanners = async () => {
     setLoading(true);
     try {
-      const response = await getBanners(selectedVenue === 0 ? undefined : selectedVenue);
+      // Если selectedVenue === 0 – передаём undefined, чтобы получить баннеры для всех площадок
+      const venueId = selectedVenue === 0 ? undefined : (selectedVenue as number);
+      const response = await getBanners(venueId);
       setBanners(response.data);
     } finally {
       setLoading(false);
@@ -163,7 +171,7 @@ export default function BannersList({ onEdit, onAdd }: BannersListProps) {
         rows={banners}
         columns={columns}
         loading={loading}
-        pageSizeOptions={[10, 25, 50]}
+        pageSizeOptions={[10, 25, 50, 100]}
         getRowId={(row) => row.id}
       />
     </div>

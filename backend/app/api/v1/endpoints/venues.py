@@ -11,15 +11,27 @@ from app.models.user import User
 
 router = APIRouter()
 
-@router.get("/", response_model=List[VenueOut])
+# Эндпоинт для списка площадок (без слеша)
+@router.get("", response_model=List[VenueOut])
 def read_venues(
     db: Session = Depends(get_db),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
     current_user: User = Depends(get_current_active_user),
 ):
-    venues = crud_venue.get_multi(db, skip=skip, limit=limit)
-    return venues
+    """Получить список всех площадок (доступно любому аутентифицированному пользователю)"""
+    return crud_venue.get_multi(db, skip=skip, limit=limit)
+
+# Эндпоинт для списка площадок (со слешем) – чтобы избежать редиректа
+@router.get("/", response_model=List[VenueOut])
+def read_venues_with_slash(
+    db: Session = Depends(get_db),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=100),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Получить список всех площадок (доступно любому аутентифицированному пользователю)"""
+    return crud_venue.get_multi(db, skip=skip, limit=limit)
 
 @router.post("/", response_model=VenueOut)
 def create_venue(
@@ -27,6 +39,7 @@ def create_venue(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ):
+    """Создать новую площадку (только суперпользователь)"""
     if venue_in.domain:
         existing = db.query(Venue).filter(
             and_(
