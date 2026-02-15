@@ -10,8 +10,10 @@ from .sms_provider import SMSProvider
 from .netflow_record import NetFlowRecord
 from .wireguard_peer import WireGuardPeer
 from .portal_template import PortalTemplate
-from .event import Event          # новая модель
-from .banner import Banner        # новая модель
+from .event import Event
+from .banner import Banner
+from .nas_status_history import NASStatusHistory      # новая модель
+from .audit_log import AuditLog                        # новая модель
 
 __all__ = [
     "Base",
@@ -28,4 +30,6 @@ __all__ = [
     "PortalTemplate",
     "Event",
     "Banner",
+    "NASStatusHistory",   # добавить сюда
+    "AuditLog",           # добавить сюда
 ]
