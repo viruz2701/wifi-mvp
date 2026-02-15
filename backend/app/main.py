@@ -5,7 +5,14 @@ from app.api.v1.endpoints import (
     user_profiles, sessions, local_users
 )
 from app.api.v1.endpoints import netflow
+
+from app.core.audit_middleware import AuditMiddleware
+app.add_middleware(AuditMiddleware)
+
 app = FastAPI(title="WiFi Auth Platform MVP", version="0.2.0")  # обновим версию
+
+from app.api.v1.endpoints import export
+app.include_router(export.router, prefix="/api/v1/export", tags=["export"])
 
 from app.api.v1.endpoints import wireguard
 app.include_router(wireguard.router, prefix="/api/v1/wireguard/peers", tags=["wireguard"])
@@ -15,6 +22,7 @@ app.include_router(portal_preview.router, prefix="/api/v1/portal", tags=["portal
 from app.core.rate_limit import RateLimitMiddleware
 
 app.add_middleware(RateLimitMiddleware, calls_per_minute=60)
+from app.core.rate_limit_api import APIRateLimitMiddleware
 
 from app.api.v1.endpoints import banners, reports
 from app.api.v1.endpoints import portal_templates
@@ -40,6 +48,8 @@ app.include_router(radius.router, prefix="/api/v1/radius", tags=["radius"])
 app.include_router(user_profiles.router, prefix="/api/v1/user-profiles", tags=["user_profiles"])
 app.include_router(sessions.router, prefix="/api/v1/sessions", tags=["sessions"])
 app.include_router(local_users.router, prefix="/api/v1/local-users", tags=["local_users"])
+
+app.add_middleware(APIRateLimitMiddleware, calls_per_minute=100)
 
 
 @app.get("/")
