@@ -1,10 +1,14 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+import os
+
 from app.api.v1.endpoints import (
     auth, users, venues, nas_devices, test,
     sms_providers, sms_auth, local_auth, radius,
     user_profiles, sessions, local_users, netflow,
     wireguard, portal_preview, portal_templates, banners,
-    reports, export
+    reports, export, call_auth, telegram_auth, opennds,
+    builtin_templates  # добавлен импорт для предустановленных шаблонов
 )
 from app.core.rate_limit import RateLimitMiddleware
 from app.core.rate_limit_api import APIRateLimitMiddleware
@@ -13,7 +17,16 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI(title="WiFi Auth Platform MVP", version="0.2.0")
 
-# Middleware
+# CORS middleware (для разработки)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[os.getenv("FRONTEND_URL", "http://localhost")],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Кастомные middleware
 app.add_middleware(RateLimitMiddleware, calls_per_minute=60)
 app.add_middleware(APIRateLimitMiddleware, calls_per_minute=100)
 app.add_middleware(AuditMiddleware)
@@ -32,6 +45,10 @@ app.include_router(radius.router, prefix="/api/v1/radius", tags=["radius"])
 app.include_router(user_profiles.router, prefix="/api/v1/user-profiles", tags=["user_profiles"])
 app.include_router(sessions.router, prefix="/api/v1/sessions", tags=["sessions"])
 app.include_router(local_users.router, prefix="/api/v1/local-users", tags=["local_users"])
+app.include_router(call_auth.router, prefix="/api/v1/auth", tags=["call_auth"])
+app.include_router(telegram_auth.router, prefix="/api/v1/auth", tags=["telegram"])
+app.include_router(opennds.router, prefix="/api/v1/portal", tags=["opennds"])
+app.include_router(builtin_templates.router, prefix="/api/v1", tags=["builtin"])  # эндпоинты для предустановленных шаблонов
 
 app.include_router(netflow.router, prefix="/api/v1/netflow", tags=["netflow"])
 app.include_router(wireguard.router, prefix="/api/v1/wireguard/peers", tags=["wireguard"])

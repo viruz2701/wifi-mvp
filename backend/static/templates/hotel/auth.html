@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>$(venue_name) - Wi-Fi гостя</title>
+    <link rel="stylesheet" href="/static/templates/hotel/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="hotel-name">$(venue_name)</div>
+    </div>
+    <div class="container">
+        <div class="welcome-card">
+            <h1>Добро пожаловать!</h1>
+            <p class="subtitle">Для доступа в интернет подтвердите ваш номер телефона</p>
+            
+            $(if error_text)
+            <div class="error">$(error_text)</div>
+            $(endif)
+            
+            <form method="post" action="/portal/$(venue_id)/auth">
+                <input type="hidden" name="mac" value="$(mac)">
+                <div class="form-group">
+                    <label for="phone">Номер телефона</label>
+                    <input type="tel" id="phone" name="phone" placeholder="+375 (29) XXX-XX-XX" value="$(phone)" required>
+                </div>
+                <button type="submit">Получить SMS с кодом</button>
+            </form>
+            <p class="legal">Нажимая кнопку, вы соглашаетесь с <a href="#">правилами отеля</a></p>
+        </div>
+    </div>
+    <div class="footer">
+        <img src="$(banner_url)" alt="Партнеры" class="partners">
+    </div>
+</body>
+</html>

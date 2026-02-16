@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>$(venue_name) - Авторизация</title>
+    <link rel="stylesheet" href="/static/templates/dark/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="logo">
+                <img src="$(banner_url)" alt="Логотип" onerror="this.style.display='none'">
+            </div>
+            <h1>Добро пожаловать</h1>
+            <p class="sub">Подтвердите номер телефона для доступа в интернет</p>
+            
+            $(if error_text)
+            <div class="error">$(error_text)</div>
+            $(endif)
+            
+            <form method="post" action="/portal/$(venue_id)/auth">
+                <input type="hidden" name="mac" value="$(mac)">
+                <div class="form-group">
+                    <input type="tel" name="phone" placeholder="+375 (29) XXX-XX-XX" value="$(phone)" required>
+                </div>
+                <button type="submit">Получить код</button>
+            </form>
+            <p class="hint">Код придет в SMS в течение минуты</p>
+        </div>
+    </div>
+</body>
+</html>

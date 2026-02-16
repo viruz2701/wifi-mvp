@@ -1,12 +1,16 @@
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
+from app.models.sms_code import CodeMethod
 
 class SMSCodeBase(BaseModel):
     phone_number: str
     code: str
     expires_at: datetime
     venue_id: Optional[int] = None
+    method: CodeMethod = CodeMethod.SMS
+    call_id: Optional[str] = None
+    provider_id: Optional[int] = None
 
 class SMSCodeCreate(SMSCodeBase):
     pass
@@ -14,6 +18,8 @@ class SMSCodeCreate(SMSCodeBase):
 class SMSCodeUpdate(BaseModel):
     is_used: Optional[bool] = None
     attempts: Optional[int] = None
+    call_id: Optional[str] = None
+    # остальные поля обычно не обновляются
 
 class SMSCodeOut(SMSCodeBase):
     id: int

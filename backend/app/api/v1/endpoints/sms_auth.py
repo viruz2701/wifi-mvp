@@ -4,9 +4,10 @@ from datetime import datetime, timedelta
 import random
 import string
 from app.db.session import get_db
-from app.core.sms import get_sms_provider, SMSAdapter
-from app.core.redis_client import get_redis  # <-- добавить импорт
-from app.models.sms_code import SMSCode
+from app.core.redis_client import get_redis
+from app.core.sms import get_sms_provider_by_type, get_sms_adapter
+from app.models.sms_code import SMSCode, CodeMethod
+from app.models.sms_provider import SMSProviderType
 from app.models.user_profile import UserProfile
 from app.schemas.sms import SMSRequest, SMSVerify
 
@@ -28,20 +29,26 @@ async def sms_request(request: SMSRequest, db: Session = Depends(get_db)):
     code = generate_code(4)
     expires_at = datetime.utcnow() + timedelta(minutes=5)
 
-    # Сохраняем в БД
+    # Получаем активного провайдера для SMS (тип rocketsms)
+    provider = get_sms_provider_by_type(db, SMSProviderType.ROCKETSMS)
+    provider_id = provider.id if provider else None
+
+    # Сохраняем в БД с указанием метода и провайдера
     sms_code = SMSCode(
         phone_number=request.phone,
         code=code,
-        expires_at=expires_at
+        expires_at=expires_at,
+        venue_id=request.venue_id,
+        method=CodeMethod.SMS,
+        provider_id=provider_id
     )
     db.add(sms_code)
     db.commit()
 
     # Отправляем SMS
-    provider = get_sms_provider(db)
     if provider:
-        adapter = SMSAdapter(provider)
-        await adapter.send(request.phone, code, request.mac)
+        adapter = get_sms_adapter(provider)
+        await adapter.send(request.phone, code)  # убрали mac
     else:
         # Заглушка: выводим в лог
         print(f"SMS to {request.phone}: code={code}")
@@ -50,10 +57,11 @@ async def sms_request(request: SMSRequest, db: Session = Depends(get_db)):
 
 @router.post("/sms/verify")
 async def sms_verify(request: SMSVerify, db: Session = Depends(get_db)):
-    # Поиск кода
+    # Поиск кода с учётом метода SMS
     sms_code = db.query(SMSCode).filter(
         SMSCode.phone_number == request.phone,
         SMSCode.code == request.code,
+        SMSCode.method == CodeMethod.SMS,
         SMSCode.is_used == False,
         SMSCode.expires_at > datetime.utcnow()
     ).first()
@@ -80,8 +88,8 @@ async def sms_verify(request: SMSVerify, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(profile)
 
-    # === СОХРАНЕНИЕ В REDIS ===
+    # Сохраняем авторизацию в Redis для RADIUS
     redis = await get_redis()
-    await redis.setex(f"auth:mac:{request.mac}", 28800, "1")  # 8 часов (28800 секунд)
+    await redis.setex(f"auth:mac:{request.mac}", 28800, "1")
 
     return {"message": "Success", "profile_id": profile.id}

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Подтверждение - $(venue_name)</title>
+    <link rel="stylesheet" href="/static/templates/dark/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="logo">
+                <img src="$(banner_url)" alt="Логотип" onerror="this.style.display='none'">
+            </div>
+            <h1>Введите код</h1>
+            <p class="sub">Код отправлен на номер $(phone)</p>
+            
+            $(if error_text)
+            <div class="error">$(error_text)</div>
+            $(endif)
+            
+            <form method="post" action="/portal/$(venue_id)/verify">
+                <input type="hidden" name="phone" value="$(phone)">
+                <input type="hidden" name="mac" value="$(mac)">
+                <div class="form-group">
+                    <input type="text" name="code" placeholder="Код из SMS" required>
+                </div>
+                <button type="submit">Подтвердить</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

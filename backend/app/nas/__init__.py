@@ -2,6 +2,9 @@ from .mikrotik import MikrotikNAS
 from .openwrt import OpenWrtNAS
 from .ubiquiti import UbiquitiNAS
 from app.core.security import decrypt_secret
+from .opennds import OpenWrtOpenNDS
+
+
 
 __all__ = ["MikrotikNAS", "OpenWrtNAS", "UbiquitiNAS", "get_nas_instance"]
 
@@ -15,7 +18,16 @@ def get_nas_instance(device):
     api_password = None
     if device.api_password:
         api_password = decrypt_secret(device.api_password)
-
+    
+    if device.type == 'opennds':
+        return OpenWrtOpenNDS(
+            host=device.ip_address,
+            username=device.api_username or '',
+            password=api_password,
+            port=22,
+            config=device.config
+        )
+    
     if device.type == 'mikrotik':
         return MikrotikNAS(
             host=device.ip_address,

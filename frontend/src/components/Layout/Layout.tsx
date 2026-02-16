@@ -12,6 +12,7 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { useAuth } from '@/hooks/useAuth';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
+import SmsIcon from '@mui/icons-material/Sms';
 
 const drawerWidth = 240;
 
@@ -36,6 +37,7 @@ export default function Layout() {
     { text: 'Отчёты', icon: <AssessmentIcon />, path: '/reports', roles: ['admin', 'marketing'] },
     { text: 'Администраторы', icon: <AdminPanelSettingsIcon />, path: '/users', roles: ['admin'] },
     { text: 'WireGuard Peers', icon: <VpnKeyIcon />, path: '/wireguard-peers', roles: ['admin'] },
+    { text: 'SMS-провайдеры', icon: <SmsIcon />, path: '/sms-providers', roles: ['admin'] },
   ];
 
   const drawer = (

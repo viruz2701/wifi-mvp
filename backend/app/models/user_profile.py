@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, BigInteger, Boolean, ForeignKey
 from sqlalchemy.sql import func
 from app.models.base import BaseModel
+from sqlalchemy import ForeignKey
 
 class UserProfile(BaseModel):
     __tablename__ = "user_profiles"
@@ -16,3 +17,5 @@ class UserProfile(BaseModel):
     is_vip = Column(Boolean, default=False)
     device_oui = Column(String(8), nullable=True)  # первые 3 октета MAC
     venue_id = Column(Integer, ForeignKey("venues.id"), nullable=True)  # площадка первого появления
+    current_tariff_id = Column(Integer, ForeignKey('tariff_plans.id'), nullable=True)
+    tariff_expires_at = Column(DateTime(timezone=True), nullable=True)

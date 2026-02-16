@@ -12,6 +12,12 @@ import BannersPage from './pages/Banners';
 import Dashboard from './pages/Dashboard';
 import DataAudit from './pages/DataAudit';
 import WireGuardPeers from './pages/WireGuardPeers';
+import SmsProvidersPage from './pages/SmsProviders';
+
+
+import TelegramAuthPage from './pages/TelegramAuthPage';
+
+// Внутри <Routes>
 
 
 
@@ -33,8 +39,8 @@ function App() {
           <Route path="venues" element={<VenuesPage />} />
           <Route path="data-audit" element={<DataAudit />} />
           
-
-
+          <Route path="sms-providers" element={<SmsProvidersPage />} />
+          <Route path="/telegram-auth" element={<TelegramAuthPage />} />
           <Route path="wireguard-peers" element={<WireGuardPeers />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="nas-devices" element={<NasDevicesPage />} />

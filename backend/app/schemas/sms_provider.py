@@ -1,25 +1,22 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any, Dict
+from app.models.sms_provider import SMSProviderType
 
 class SMSProviderBase(BaseModel):
     name: str
-    api_url: str
-    api_key: str
-    sender: Optional[str] = None
+    type: SMSProviderType
+    config: Dict[str, Any] = {}
     is_active: bool = True
-    config: Optional[str] = None
 
 class SMSProviderCreate(SMSProviderBase):
     pass
 
 class SMSProviderUpdate(BaseModel):
     name: Optional[str] = None
-    api_url: Optional[str] = None
-    api_key: Optional[str] = None
-    sender: Optional[str] = None
+    type: Optional[SMSProviderType] = None
+    config: Optional[Dict[str, Any]] = None
     is_active: Optional[bool] = None
-    config: Optional[str] = None
 
 class SMSProviderOut(SMSProviderBase):
     id: int

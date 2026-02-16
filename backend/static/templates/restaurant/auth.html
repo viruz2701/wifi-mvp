@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>$(venue_name) - Wi-Fi для гостей</title>
+    <link rel="stylesheet" href="/static/templates/restaurant/style.css">
+</head>
+<body>
+    <div class="hero">
+        <div class="overlay"></div>
+        <div class="content">
+            <h1>$(venue_name)</h1>
+            <p class="tagline">Вкусная еда, быстрый Wi-Fi</p>
+            
+            $(if error_text)
+            <div class="error">$(error_text)</div>
+            $(endif)
+            
+            <div class="auth-box">
+                <h2>Подтвердите номер телефона</h2>
+                <form method="post" action="/portal/$(venue_id)/auth">
+                    <input type="hidden" name="mac" value="$(mac)">
+                    <div class="input-group">
+                        <input type="tel" name="phone" placeholder="+375 (29) XXX-XX-XX" value="$(phone)" required>
+                    </div>
+                    <button type="submit">Получить код</button>
+                </form>
+            </div>
+            
+            <div class="offer">
+                <img src="$(banner_url)" alt="Спецпредложение" class="banner">
+            </div>
+        </div>
+    </div>
+</body>
+</html>

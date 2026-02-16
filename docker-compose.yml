@@ -171,6 +171,24 @@ services:
     depends_on:
       - timescaledb
 
+  telegram_bot:
+    build:
+      context: ./telegram_bot
+      dockerfile: Dockerfile
+    container_name: wifi_telegram_bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - backend
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./telegram_bot:/app
+    networks:
+      - default
+
 volumes:
   timescaledb_data:
   redis_data:

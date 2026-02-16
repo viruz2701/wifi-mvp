@@ -1,16 +1,22 @@
 from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Enum, LargeBinary, Integer
 from sqlalchemy.sql import func
 from app.models.base import BaseModel
+from sqlalchemy import Column, JSON
+
+
 import enum
 
 class NASDeviceType(str, enum.Enum):
     MIKROTIK = "mikrotik"
     OPENWRT = "openwrt"
     UBIQUITI = "ubiquiti"
+    OPENNDS = "opennds"  # новый тип
 
 class NASDevice(BaseModel):
     __tablename__ = "nas_devices"
+    
 
+    config = Column(JSON, nullable=True, default={})  # дополнительные настройки
     venue_id = Column(Integer, ForeignKey("venues.id"), nullable=False)
     name = Column(String, nullable=False)
     type = Column(Enum(NASDeviceType), nullable=False)
