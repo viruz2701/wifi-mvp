@@ -4,8 +4,11 @@ import { Button, IconButton, Stack, Typography, Chip } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
-import { getUsers, deleteUser } from '@/api/users';
+import api from '@/api/axios';
 import { User } from '@/types';
+import { useSnackbar } from '@/hooks/useSnackbar';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { LoadingScreen } from '@/components/LoadingScreen';
 
 interface UsersListProps {
   onEdit: (id: number) => void;
@@ -15,6 +18,8 @@ interface UsersListProps {
 export default function UsersList({ onEdit, onAdd }: UsersListProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const { showSuccess, showError } = useSnackbar();
 
   useEffect(() => {
     fetchUsers();
@@ -23,17 +28,27 @@ export default function UsersList({ onEdit, onAdd }: UsersListProps) {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const response = await getUsers();
+      const response = await api.get('/users');
       setUsers(response.data);
+    } catch (err) {
+      showError('Не удалось загрузить список пользователей');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm('Удалить пользователя?')) {
-      await deleteUser(id);
+  const handleDeleteClick = (id: number) => setDeleteId(id);
+
+  const handleConfirmDelete = async () => {
+    if (!deleteId) return;
+    try {
+      await api.delete(`/users/${deleteId}`);
+      showSuccess('Пользователь удалён');
       fetchUsers();
+    } catch (err) {
+      showError('Ошибка при удалении');
+    } finally {
+      setDeleteId(null);
     }
   };
 
@@ -67,7 +82,7 @@ export default function UsersList({ onEdit, onAdd }: UsersListProps) {
           <IconButton size="small" onClick={() => onEdit(params.row.id)}>
             <EditIcon />
           </IconButton>
-          <IconButton size="small" onClick={() => handleDelete(params.row.id)}>
+          <IconButton size="small" onClick={() => handleDeleteClick(params.row.id)}>
             <DeleteIcon />
           </IconButton>
         </Stack>
@@ -75,20 +90,30 @@ export default function UsersList({ onEdit, onAdd }: UsersListProps) {
     },
   ];
 
+  if (loading && users.length === 0) return <LoadingScreen message="Загрузка пользователей..." />;
+
   return (
-    <div style={{ height: 600, width: '100%' }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h5">Администраторы</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={onAdd}>
-          Добавить
-        </Button>
-      </Stack>
-      <DataGrid
-        rows={users}
-        columns={columns}
-        loading={loading}
-        pageSizeOptions={[10, 25, 50, 100]}
+    <>
+      <div style={{ height: 600, width: '100%' }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+          <Typography variant="h5">Администраторы</Typography>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={onAdd}>
+            Добавить
+          </Button>
+        </Stack>
+        <DataGrid
+          rows={users}
+          columns={columns}
+          loading={loading}
+          pageSizeOptions={[10, 25, 50, 100]}
+        />
+      </div>
+      <ConfirmDialog
+        open={deleteId !== null}
+        message="Вы уверены, что хотите удалить пользователя?"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteId(null)}
       />
-    </div>
+    </>
   );
 }

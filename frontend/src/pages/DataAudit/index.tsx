@@ -11,6 +11,8 @@ import { ru } from 'date-fns/locale';
 import { format } from 'date-fns';
 import api from '@/api/axios';
 import DownloadIcon from '@mui/icons-material/Download';
+import { useSnackbar } from '@/hooks/useSnackbar';
+import { LoadingScreen } from '@/components/LoadingScreen';
 
 interface AuthLog {
   id: number;
@@ -24,7 +26,6 @@ interface AuthLog {
 export default function DataAudit() {
   const [logs, setLogs] = useState<AuthLog[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [filters, setFilters] = useState({
     mac: '',
     phone: '',
@@ -33,10 +34,10 @@ export default function DataAudit() {
   });
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const { showError } = useSnackbar();
 
   const fetchLogs = async () => {
     setLoading(true);
-    setError('');
     try {
       const params: any = {
         page,
@@ -49,7 +50,7 @@ export default function DataAudit() {
       setLogs(response.data.items);
       setTotalPages(response.data.total_pages);
     } catch (err) {
-      setError('Ошибка загрузки данных');
+      showError('Ошибка загрузки данных');
     } finally {
       setLoading(false);
     }
@@ -69,6 +70,8 @@ export default function DataAudit() {
   useEffect(() => {
     fetchLogs();
   }, [page, filters]);
+
+  if (loading && logs.length === 0) return <LoadingScreen message="Загрузка логов..." />;
 
   return (
     <Box>
@@ -116,8 +119,6 @@ export default function DataAudit() {
           </Stack>
         </Box>
       </Paper>
-
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
       <TableContainer component={Paper}>
         <Table>

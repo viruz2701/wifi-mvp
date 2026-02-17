@@ -13,6 +13,7 @@ import {
   Box,
   Typography,
 } from '@mui/material';
+import api from '@/api/axios'; // Импортируем настроенный axios
 import { SmsProvider, SmsProviderType, SmsProviderFormData } from './types';
 
 interface ProviderFormProps {
@@ -38,6 +39,7 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (provider) {
@@ -55,11 +57,16 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
         is_active: true,
       });
     }
+    setValidationErrors({});
   }, [provider]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    // очищаем ошибку для этого поля при вводе
+    if (validationErrors[name]) {
+      setValidationErrors((prev) => ({ ...prev, [name]: '' }));
+    }
   };
 
   const handleConfigChange = (field: string, value: any) => {
@@ -67,6 +74,10 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
       ...prev,
       config: { ...prev.config, [field]: value },
     }));
+    // очищаем ошибку для config
+    if (validationErrors.config) {
+      setValidationErrors((prev) => ({ ...prev, config: '' }));
+    }
   };
 
   const handleCheckbox = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -75,12 +86,69 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
 
   const handleTypeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newType = e.target.value as SmsProviderType;
-    // Сбрасываем конфиг при смене типа
     setFormData({
       ...formData,
       type: newType,
       config: {},
     });
+    setValidationErrors({});
+  };
+
+  const validate = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (!formData.name.trim()) {
+      errors.name = 'Название не может быть пустым';
+    }
+
+    // Проверка config в зависимости от типа
+    if (Object.keys(formData.config).length === 0) {
+      errors.config = 'Конфигурация не может быть пустой';
+    } else {
+      if (formData.type === 'rocketsms') {
+        if (!formData.config.username) {
+          errors.username = 'Логин обязателен';
+        }
+        if (!formData.config.password_md5) {
+          errors.password_md5 = 'MD5-пароль обязателен';
+        }
+      } else if (formData.type === 'callpassword') {
+        if (!formData.config.api_key) {
+          errors.api_key = 'API ключ обязателен';
+        }
+        // Можно добавить проверку api_secret, если он есть
+      }
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async () => {
+    if (!validate()) {
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    try {
+      const url = provider 
+        ? `/sms-providers/${provider.id}`
+        : '/sms-providers';
+      
+      if (provider) {
+        await api.put(url, formData);
+      } else {
+        await api.post(url, formData);
+      }
+
+      onSaved();
+      onClose();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || err.message || 'Ошибка сохранения');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderConfigFields = () => {
@@ -96,6 +164,8 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
               value={formData.config.username || ''}
               onChange={(e) => handleConfigChange('username', e.target.value)}
               required
+              error={!!validationErrors.username}
+              helperText={validationErrors.username}
             />
             <TextField
               fullWidth
@@ -104,7 +174,8 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
               value={formData.config.password_md5 || ''}
               onChange={(e) => handleConfigChange('password_md5', e.target.value)}
               required
-              helperText="MD5-хеш пароля от личного кабинета"
+              error={!!validationErrors.password_md5}
+              helperText={validationErrors.password_md5 || "MD5-хеш пароля от личного кабинета"}
             />
             <TextField
               fullWidth
@@ -119,7 +190,7 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
       case 'callpassword':
         return (
           <Box sx={{ mt: 2 }}>
-            <Typography variant="subtitle2" gutterBottom>Настройки CallPassword (будут уточнены)</Typography>
+            <Typography variant="subtitle2" gutterBottom>Настройки CallPassword</Typography>
             <TextField
               fullWidth
               margin="dense"
@@ -127,44 +198,31 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
               value={formData.config.api_key || ''}
               onChange={(e) => handleConfigChange('api_key', e.target.value)}
               required
+              error={!!validationErrors.api_key}
+              helperText={validationErrors.api_key}
             />
-            {/* Добавим остальные поля после изучения API */}
+            <TextField
+              fullWidth
+              margin="dense"
+              label="API секрет"
+              value={formData.config.api_secret || ''}
+              onChange={(e) => handleConfigChange('api_secret', e.target.value)}
+              required
+              error={!!validationErrors.api_secret}
+              helperText={validationErrors.api_secret}
+            />
+            <TextField
+              fullWidth
+              margin="dense"
+              label="Таймаут (сек)"
+              value={formData.config.timeout || 60}
+              onChange={(e) => handleConfigChange('timeout', e.target.value)}
+              type="number"
+            />
           </Box>
         );
       default:
         return null;
-    }
-  };
-
-  const handleSubmit = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const url = provider 
-        ? `/api/v1/sms-providers/${provider.id}`
-        : '/api/v1/sms-providers';
-      const method = provider ? 'PUT' : 'POST';
-      
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Ошибка сохранения');
-      }
-
-      onSaved();
-      onClose();
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -201,9 +259,14 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
           value={formData.name}
           onChange={handleChange}
           required
+          error={!!validationErrors.name}
+          helperText={validationErrors.name}
         />
 
         {renderConfigFields()}
+        {validationErrors.config && (
+          <Alert severity="error" sx={{ mt: 1 }}>{validationErrors.config}</Alert>
+        )}
 
         <FormControlLabel
           control={

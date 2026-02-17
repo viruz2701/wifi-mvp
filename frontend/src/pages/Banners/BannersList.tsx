@@ -14,11 +14,14 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import FileUploader from '@/components/FileUploader/FileUploader';
+import { useSnackbar } from '@/hooks/useSnackbar';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { LoadingScreen } from '@/components/LoadingScreen';
+import { useAuth } from '@/hooks/useAuth';
 import { getBanners, deleteBanner } from '@/api/banners';
 import { getVenues } from '@/api/venues';
 import { Banner, Venue } from '@/types';
-import FileUploader from '@/components/FileUploader/FileUploader';
-import { useAuth } from '@/hooks/useAuth';
 
 interface BannersListProps {
   onEdit: (id: number) => void;
@@ -30,24 +33,18 @@ export default function BannersList({ onEdit, onAdd }: BannersListProps) {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(false);
-  // Инициализируем selectedVenue пустой строкой – это означает, что площадка ещё не выбрана.
   const [selectedVenue, setSelectedVenue] = useState<number | ''>('');
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const { showSuccess, showError } = useSnackbar();
 
-  // Загружаем список площадок для администратора и устанавливаем первую доступную площадку
   useEffect(() => {
     if (user?.role === 'admin') {
-      getVenues().then(res => {
-        setVenues(res.data);
-        if (res.data.length > 0) {
-          setSelectedVenue(res.data[0].id);
-        }
-      });
+      getVenues().then(res => setVenues(res.data));
     } else if (user?.venue_id) {
       setSelectedVenue(user.venue_id);
     }
   }, [user]);
 
-  // Загружаем баннеры только после того, как площадка выбрана
   useEffect(() => {
     if (selectedVenue !== '') {
       fetchBanners();
@@ -57,19 +54,28 @@ export default function BannersList({ onEdit, onAdd }: BannersListProps) {
   const fetchBanners = async () => {
     setLoading(true);
     try {
-      // Если selectedVenue === 0 – передаём undefined, чтобы получить баннеры для всех площадок
       const venueId = selectedVenue === 0 ? undefined : (selectedVenue as number);
       const response = await getBanners(venueId);
       setBanners(response.data);
+    } catch (err) {
+      showError('Не удалось загрузить баннеры');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm('Удалить баннер?')) {
-      await deleteBanner(id);
+  const handleDeleteClick = (id: number) => setDeleteId(id);
+
+  const handleConfirmDelete = async () => {
+    if (!deleteId) return;
+    try {
+      await deleteBanner(deleteId);
+      showSuccess('Баннер удалён');
       fetchBanners();
+    } catch (err) {
+      showError('Ошибка при удалении');
+    } finally {
+      setDeleteId(null);
     }
   };
 
@@ -77,6 +83,7 @@ export default function BannersList({ onEdit, onAdd }: BannersListProps) {
     setBanners(prev =>
       prev.map(b => (b.id === bannerId ? { ...b, image_url: newImageUrl } : b))
     );
+    showSuccess('Изображение загружено');
   };
 
   const columns: GridColDef[] = [
@@ -130,7 +137,7 @@ export default function BannersList({ onEdit, onAdd }: BannersListProps) {
           <IconButton size="small" onClick={() => onEdit(params.row.id)}>
             <EditIcon />
           </IconButton>
-          <IconButton size="small" onClick={() => handleDelete(params.row.id)}>
+          <IconButton size="small" onClick={() => handleDeleteClick(params.row.id)}>
             <DeleteIcon />
           </IconButton>
         </Stack>
@@ -138,42 +145,53 @@ export default function BannersList({ onEdit, onAdd }: BannersListProps) {
     },
   ];
 
+  if (loading && banners.length === 0) return <LoadingScreen message="Загрузка баннеров..." />;
+
   return (
-    <div style={{ height: 600, width: '100%' }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h5">Баннеры</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={onAdd}>
-          Добавить
-        </Button>
-      </Stack>
+    <>
+      <div style={{ height: 600, width: '100%' }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+          <Typography variant="h5">Баннеры</Typography>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={onAdd}>
+            Добавить
+          </Button>
+        </Stack>
 
-      {user?.role === 'admin' && (
-        <Box mb={2} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <TextField
-            select
-            label="Площадка"
-            value={selectedVenue}
-            onChange={(e) => setSelectedVenue(Number(e.target.value))}
-            sx={{ minWidth: 200 }}
-            size="small"
-          >
-            <MenuItem value={0}>Все площадки</MenuItem>
-            {venues.map(v => (
-              <MenuItem key={v.id} value={v.id}>
-                {v.name}
-              </MenuItem>
-            ))}
-          </TextField>
-        </Box>
-      )}
+        {user?.role === 'admin' && (
+          <Box mb={2} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <TextField
+              select
+              label="Площадка"
+              value={selectedVenue}
+              onChange={(e) => setSelectedVenue(Number(e.target.value))}
+              sx={{ minWidth: 200 }}
+              size="small"
+            >
+              <MenuItem value={0}>Все площадки</MenuItem>
+              {venues.map(v => (
+                <MenuItem key={v.id} value={v.id}>
+                  {v.name}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Box>
+        )}
 
-      <DataGrid
-        rows={banners}
-        columns={columns}
-        loading={loading}
-        pageSizeOptions={[10, 25, 50, 100]}
-        getRowId={(row) => row.id}
+        <DataGrid
+          rows={banners}
+          columns={columns}
+          loading={loading}
+          pageSizeOptions={[10, 25, 50, 100]}
+          getRowId={(row) => row.id}
+        />
+      </div>
+
+      <ConfirmDialog
+        open={deleteId !== null}
+        message="Вы уверены, что хотите удалить баннер?"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteId(null)}
       />
-    </div>
+    </>
   );
 }

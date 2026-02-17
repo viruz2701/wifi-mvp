@@ -8,20 +8,27 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { ru } from 'date-fns/locale';
 import { format } from 'date-fns';
 import { ActivityReportItem } from '@/types';
+import { useSnackbar } from '@/hooks/useSnackbar';
 
-export default function ActivityReport() {
+interface ActivityReportProps {
+  onError?: (msg: string) => void;
+}
+
+export default function ActivityReport({ onError }: ActivityReportProps) {
   const { user } = useAuth();
+  const { showError } = useSnackbar();
   const [venues, setVenues] = useState<any[]>([]);
   const [selectedVenue, setSelectedVenue] = useState<number | ''>('');
   const [fromDate, setFromDate] = useState<Date | null>(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
   const [toDate, setToDate] = useState<Date | null>(new Date());
   const [data, setData] = useState<ActivityReportItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+
+  const errorHandler = onError || showError;
 
   useEffect(() => {
     if (user?.role === 'admin') {
-      api.get('/venues').then(res => setVenues(res.data));
+      api.get('/venues').then(res => setVenues(res.data)).catch(() => errorHandler('Не удалось загрузить площадки'));
     } else if (user?.venue_id) {
       setSelectedVenue(user.venue_id);
     }
@@ -30,7 +37,6 @@ export default function ActivityReport() {
   const fetchReport = async () => {
     if (!fromDate || !toDate) return;
     setLoading(true);
-    setError('');
     try {
       const params: any = {
         from_date: format(fromDate, 'yyyy-MM-dd'),
@@ -40,7 +46,7 @@ export default function ActivityReport() {
       const response = await api.get('/reports/activity', { params });
       setData(response.data);
     } catch (err) {
-      setError('Ошибка загрузки отчёта');
+      errorHandler('Ошибка загрузки отчёта');
     } finally {
       setLoading(false);
     }
@@ -78,7 +84,6 @@ export default function ActivityReport() {
             {loading ? 'Загрузка...' : 'Сформировать'}
           </Button>
         </Box>
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         <ResponsiveContainer width="100%" height={400}>
           <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" />

@@ -4,8 +4,11 @@ import { Button, IconButton, Stack, Typography, Chip } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
-import { getNasDevices, deleteNasDevice } from '@/api/nasDevices';
+import api from '@/api/axios';
 import { NASDevice } from '@/types';
+import { useSnackbar } from '@/hooks/useSnackbar';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { LoadingScreen } from '@/components/LoadingScreen';
 
 interface NasDevicesListProps {
   onEdit: (id: number) => void;
@@ -15,6 +18,8 @@ interface NasDevicesListProps {
 export default function NasDevicesList({ onEdit, onAdd }: NasDevicesListProps) {
   const [devices, setDevices] = useState<NASDevice[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const { showSuccess, showError } = useSnackbar();
 
   useEffect(() => {
     fetchDevices();
@@ -23,17 +28,27 @@ export default function NasDevicesList({ onEdit, onAdd }: NasDevicesListProps) {
   const fetchDevices = async () => {
     setLoading(true);
     try {
-      const response = await getNasDevices();
+      const response = await api.get('/nas-devices');
       setDevices(response.data);
+    } catch (err) {
+      showError('Не удалось загрузить список устройств');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm('Удалить устройство?')) {
-      await deleteNasDevice(id);
+  const handleDeleteClick = (id: number) => setDeleteId(id);
+
+  const handleConfirmDelete = async () => {
+    if (!deleteId) return;
+    try {
+      await api.delete(`/nas-devices/${deleteId}`);
+      showSuccess('Устройство удалено');
       fetchDevices();
+    } catch (err) {
+      showError('Ошибка при удалении');
+    } finally {
+      setDeleteId(null);
     }
   };
 
@@ -60,7 +75,7 @@ export default function NasDevicesList({ onEdit, onAdd }: NasDevicesListProps) {
           <IconButton size="small" onClick={() => onEdit(params.row.id)}>
             <EditIcon />
           </IconButton>
-          <IconButton size="small" onClick={() => handleDelete(params.row.id)}>
+          <IconButton size="small" onClick={() => handleDeleteClick(params.row.id)}>
             <DeleteIcon />
           </IconButton>
         </Stack>
@@ -68,20 +83,30 @@ export default function NasDevicesList({ onEdit, onAdd }: NasDevicesListProps) {
     },
   ];
 
+  if (loading && devices.length === 0) return <LoadingScreen message="Загрузка устройств..." />;
+
   return (
-    <div style={{ height: 600, width: '100%' }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h5">NAS-устройства</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={onAdd}>
-          Добавить
-        </Button>
-      </Stack>
-      <DataGrid
-        rows={devices}
-        columns={columns}
-        loading={loading}
-        pageSizeOptions={[10, 25, 50, 100]}
+    <>
+      <div style={{ height: 600, width: '100%' }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+          <Typography variant="h5">NAS-устройства</Typography>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={onAdd}>
+            Добавить
+          </Button>
+        </Stack>
+        <DataGrid
+          rows={devices}
+          columns={columns}
+          loading={loading}
+          pageSizeOptions={[10, 25, 50, 100]}
+        />
+      </div>
+      <ConfirmDialog
+        open={deleteId !== null}
+        message="Вы уверены, что хотите удалить устройство?"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteId(null)}
       />
-    </div>
+    </>
   );
 }

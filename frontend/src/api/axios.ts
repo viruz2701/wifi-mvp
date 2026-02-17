@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL: '/api/v1', // относительный путь, будет проксироваться Vite
   headers: {
     'Content-Type': 'application/json',
   },
@@ -38,11 +38,9 @@ api.interceptors.response.use(
       message: error.message
     });
     
-    // Если сервер вернул 401 (неавторизован), очищаем токен и перенаправляем на логин
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      // Проверяем, что код выполняется в браузере (для совместимости с SSR)
       if (typeof window !== 'undefined') {
         window.location.href = '/login';
       }

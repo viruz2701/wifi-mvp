@@ -19,6 +19,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import { SmsProvider } from './types';
+import api from '@/api/axios';
+import { useSnackbar } from '@/hooks/useSnackbar';
 
 interface ProvidersListProps {
   onEdit: (provider: SmsProvider) => void;
@@ -29,20 +31,16 @@ const ProvidersList: React.FC<ProvidersListProps> = ({ onEdit, onAdd }) => {
   const [providers, setProviders] = useState<SmsProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { showSuccess, showError } = useSnackbar();
 
   const fetchProviders = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/v1/sms-providers', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      if (!response.ok) throw new Error('Ошибка загрузки');
-      const data = await response.json();
-      setProviders(data);
+      const response = await api.get('/sms-providers');
+      setProviders(response.data);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Ошибка загрузки');
+      showError(err.message || 'Ошибка загрузки');
     } finally {
       setLoading(false);
     }
@@ -55,31 +53,21 @@ const ProvidersList: React.FC<ProvidersListProps> = ({ onEdit, onAdd }) => {
   const handleDelete = async (id: number) => {
     if (!window.confirm('Удалить провайдера?')) return;
     try {
-      const response = await fetch(`/api/v1/sms-providers/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      if (!response.ok) throw new Error('Ошибка удаления');
+      await api.delete(`/sms-providers/${id}`);
+      showSuccess('Провайдер удалён');
       fetchProviders();
     } catch (err: any) {
-      alert(err.message);
+      showError(err.message || 'Ошибка удаления');
     }
   };
 
   const handleSetActive = async (id: number) => {
     try {
-      const response = await fetch(`/api/v1/sms-providers/${id}/set-active`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      if (!response.ok) throw new Error('Ошибка активации');
+      await api.post(`/sms-providers/${id}/set-active`);
+      showSuccess('Провайдер активирован');
       fetchProviders();
     } catch (err: any) {
-      alert(err.message);
+      showError(err.message || 'Ошибка активации');
     }
   };
 

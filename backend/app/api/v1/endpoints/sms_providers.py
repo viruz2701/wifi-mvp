@@ -5,7 +5,7 @@ from app.db.session import get_db
 from app.crud.sms_provider import sms_provider as crud_provider
 from app.schemas.sms_provider import SMSProviderCreate, SMSProviderUpdate, SMSProviderOut
 from app.core.dependencies import get_current_superuser
-from app.models.sms_provider import SMSProviderType  # импортируем enum
+from app.models.sms_provider import SMSProviderType
 
 router = APIRouter()
 
@@ -19,7 +19,7 @@ def get_provider_types(
     """
     return [t.value for t in SMSProviderType]
 
-@router.get("/", response_model=List[SMSProviderOut])
+@router.get("", response_model=List[SMSProviderOut])
 def read_providers(
     db: Session = Depends(get_db),
     skip: int = Query(0, ge=0),
@@ -29,7 +29,7 @@ def read_providers(
     """Получить список всех SMS-провайдеров."""
     return crud_provider.get_multi(db, skip=skip, limit=limit)
 
-@router.post("/", response_model=SMSProviderOut)
+@router.post("", response_model=SMSProviderOut)
 def create_provider(
     provider_in: SMSProviderCreate,
     db: Session = Depends(get_db),

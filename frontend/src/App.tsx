@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { SnackbarProvider } from 'notistack';
 import Layout from './components/Layout/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login/Login';
@@ -13,45 +14,42 @@ import Dashboard from './pages/Dashboard';
 import DataAudit from './pages/DataAudit';
 import WireGuardPeers from './pages/WireGuardPeers';
 import SmsProvidersPage from './pages/SmsProviders';
-
-
 import TelegramAuthPage from './pages/TelegramAuthPage';
-
-// Внутри <Routes>
-
-
-
+import SettingsPage from './pages/Settings';
+import NasLogs from './pages/NasLogs'; // будет создан позже
 
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <Layout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="/venues" replace />} />
-          <Route path="venues" element={<VenuesPage />} />
-          <Route path="data-audit" element={<DataAudit />} />
-          
-          <Route path="sms-providers" element={<SmsProvidersPage />} />
+      <SnackbarProvider maxSnack={3} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
           <Route path="/telegram-auth" element={<TelegramAuthPage />} />
-          <Route path="wireguard-peers" element={<WireGuardPeers />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="nas-devices" element={<NasDevicesPage />} />
-          <Route path="banners" element={<BannersPage />} />
-          <Route path="user-profiles" element={<UserProfilesPage />} />
-          <Route path="users" element={<UsersPage />} />
-          <Route path="portal-templates" element={<PortalTemplatesPage />} />
-          <Route path="reports" element={<ReportsPage />} />
-          {/* Добавьте остальные маршруты по аналогии */}
-        </Route>
-      </Routes>
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="/venues" replace />} />
+            <Route path="venues" element={<VenuesPage />} />
+            <Route path="data-audit" element={<DataAudit />} />
+            <Route path="sms-providers" element={<SmsProvidersPage />} />
+            <Route path="wireguard-peers" element={<WireGuardPeers />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="nas-devices" element={<NasDevicesPage />} />
+            <Route path="nas-logs" element={<NasLogs />} />
+            <Route path="banners" element={<BannersPage />} />
+            <Route path="user-profiles" element={<UserProfilesPage />} />
+            <Route path="users" element={<UsersPage />} />
+            <Route path="portal-templates" element={<PortalTemplatesPage />} />
+            <Route path="reports" element={<ReportsPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+          </Route>
+        </Routes>
+      </SnackbarProvider>
     </BrowserRouter>
   );
 }

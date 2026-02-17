@@ -7,6 +7,9 @@ import AddIcon from '@mui/icons-material/Add';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import api from '@/api/axios';
 import { PortalTemplate } from '@/types';
+import { useSnackbar } from '@/hooks/useSnackbar';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { LoadingScreen } from '@/components/LoadingScreen';
 import PreviewDialog from '@/components/PreviewDialog/PreviewDialog';
 
 interface TemplatesListProps {
@@ -17,9 +20,11 @@ interface TemplatesListProps {
 export default function TemplatesList({ onEdit, onAdd }: TemplatesListProps) {
   const [templates, setTemplates] = useState<PortalTemplate[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewTemplateId, setPreviewTemplateId] = useState<number | null>(null);
   const [previewVenueId, setPreviewVenueId] = useState<number>(1);
+  const { showSuccess, showError } = useSnackbar();
 
   useEffect(() => {
     fetchTemplates();
@@ -30,15 +35,25 @@ export default function TemplatesList({ onEdit, onAdd }: TemplatesListProps) {
     try {
       const response = await api.get('/portal-templates');
       setTemplates(response.data);
+    } catch (err) {
+      showError('Не удалось загрузить шаблоны');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm('Удалить шаблон?')) {
-      await api.delete(`/portal-templates/${id}`);
+  const handleDeleteClick = (id: number) => setDeleteId(id);
+
+  const handleConfirmDelete = async () => {
+    if (!deleteId) return;
+    try {
+      await api.delete(`/portal-templates/${deleteId}`);
+      showSuccess('Шаблон удалён');
       fetchTemplates();
+    } catch (err) {
+      showError('Ошибка при удалении');
+    } finally {
+      setDeleteId(null);
     }
   };
 
@@ -66,7 +81,7 @@ export default function TemplatesList({ onEdit, onAdd }: TemplatesListProps) {
           <IconButton size="small" onClick={() => onEdit(params.row.id)}>
             <EditIcon />
           </IconButton>
-          <IconButton size="small" onClick={() => handleDelete(params.row.id)}>
+          <IconButton size="small" onClick={() => handleDeleteClick(params.row.id)}>
             <DeleteIcon />
           </IconButton>
         </Stack>
@@ -74,20 +89,24 @@ export default function TemplatesList({ onEdit, onAdd }: TemplatesListProps) {
     },
   ];
 
+  if (loading && templates.length === 0) return <LoadingScreen message="Загрузка шаблонов..." />;
+
   return (
-    <div style={{ height: 600, width: '100%' }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h5">Шаблоны портала</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={onAdd}>
-          Добавить
-        </Button>
-      </Stack>
-      <DataGrid
-        rows={templates}
-        columns={columns}
-        loading={loading}
-        pageSizeOptions={[10, 25, 50, 100]}
-      />
+    <>
+      <div style={{ height: 600, width: '100%' }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+          <Typography variant="h5">Шаблоны портала</Typography>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={onAdd}>
+            Добавить
+          </Button>
+        </Stack>
+        <DataGrid
+          rows={templates}
+          columns={columns}
+          loading={loading}
+          pageSizeOptions={[10, 25, 50, 100]}
+        />
+      </div>
       {previewTemplateId && (
         <PreviewDialog
           open={previewOpen}
@@ -96,6 +115,12 @@ export default function TemplatesList({ onEdit, onAdd }: TemplatesListProps) {
           venueId={previewVenueId}
         />
       )}
-    </div>
+      <ConfirmDialog
+        open={deleteId !== null}
+        message="Вы уверены, что хотите удалить шаблон?"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteId(null)}
+      />
+    </>
   );
 }

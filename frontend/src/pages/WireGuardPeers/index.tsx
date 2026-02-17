@@ -1,100 +1,111 @@
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
-from app.db.session import get_db
-from app.crud.wireguard_peer import wireguard_peer
-from app.schemas.wireguard_peer import WireGuardPeerCreate, WireGuardPeerUpdate, WireGuardPeerOut
-from app.core.dependencies import get_current_superuser
-from app.core.wireguard import add_peer, remove_peer
-from app.crud.nas_device import nas_device as crud_nas  # импорт для проверки
+import React, { useState, useEffect } from 'react';
+import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import { Button, IconButton, Stack, Typography } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
+import api from '@/api/axios';
+import { useSnackbar } from '@/hooks/useSnackbar';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { LoadingScreen } from '@/components/LoadingScreen';
 
-router = APIRouter()
+interface WireGuardPeer {
+  id: number;
+  nas_device_id: number;
+  public_key: string;
+  allowed_ips: string;
+  endpoint: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at?: string;
+}
 
-@router.get("/", response_model=List[WireGuardPeerOut])
-def read_peers(
-    db: Session = Depends(get_db),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=100),
-    current_user = Depends(get_current_superuser)
-):
-    return wireguard_peer.get_multi(db, skip=skip, limit=limit)
+export default function WireGuardPeers() {
+  const [peers, setPeers] = useState<WireGuardPeer[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const { showSuccess, showError } = useSnackbar();
 
-@router.post("/", response_model=WireGuardPeerOut)
-def create_peer(
-    peer_in: WireGuardPeerCreate,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_superuser)
-):
-    # Проверяем, существует ли NAS-устройство с таким ID
-    nas_device = crud_nas.get(db, id=peer_in.nas_device_id)
-    if not nas_device:
-        raise HTTPException(status_code=404, detail="NAS device not found")
+  useEffect(() => {
+    fetchPeers();
+  }, []);
 
-    # Проверяем, нет ли уже пира для этого NASDevice
-    existing = wireguard_peer.get_by_nas_device(db, peer_in.nas_device_id)
-    if existing:
-        raise HTTPException(status_code=400, detail="Peer already exists for this NAS device")
+  const fetchPeers = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get('/wireguard/peers');
+      setPeers(response.data);
+    } catch (error) {
+      showError('Не удалось загрузить список пиров');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    # Создаём запись в БД
-    peer = wireguard_peer.create(db, obj_in=peer_in)
+  const handleDeleteClick = (id: number) => setDeleteId(id);
 
-    # Добавляем в WireGuard
-    try:
-        add_peer(peer.public_key, peer.allowed_ips, peer.endpoint)
-    except Exception as e:
-        # Если ошибка, удаляем запись из БД и возвращаем ошибку
-        wireguard_peer.remove(db, id=peer.id)
-        raise HTTPException(status_code=500, detail=f"Failed to add peer to WireGuard: {e}")
+  const handleConfirmDelete = async () => {
+    if (!deleteId) return;
+    try {
+      await api.delete(`/wireguard/peers/${deleteId}`);
+      showSuccess('Пир удалён');
+      fetchPeers();
+    } catch (error) {
+      showError('Ошибка при удалении');
+    } finally {
+      setDeleteId(null);
+    }
+  };
 
-    return peer
+  const columns: GridColDef[] = [
+    { field: 'id', headerName: 'ID', width: 70 },
+    { field: 'nas_device_id', headerName: 'NAS Device', width: 120 },
+    { field: 'public_key', headerName: 'Public Key', width: 300 },
+    { field: 'allowed_ips', headerName: 'Allowed IPs', width: 150 },
+    { field: 'endpoint', headerName: 'Endpoint', width: 150 },
+    {
+      field: 'is_active',
+      headerName: 'Active',
+      width: 100,
+      type: 'boolean',
+    },
+    {
+      field: 'actions',
+      headerName: 'Действия',
+      width: 120,
+      renderCell: (params) => (
+        <Stack direction="row" spacing={1}>
+          <IconButton size="small" onClick={() => handleDeleteClick(params.row.id)}>
+            <DeleteIcon />
+          </IconButton>
+        </Stack>
+      ),
+    },
+  ];
 
-@router.get("/{id}", response_model=WireGuardPeerOut)
-def read_peer(
-    id: int,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_superuser)
-):
-    peer = wireguard_peer.get(db, id=id)
-    if not peer:
-        raise HTTPException(status_code=404, detail="Peer not found")
-    return peer
+  if (loading && peers.length === 0) return <LoadingScreen message="Загрузка пиров..." />;
 
-@router.put("/{id}", response_model=WireGuardPeerOut)
-def update_peer(
-    id: int,
-    peer_in: WireGuardPeerUpdate,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_superuser)
-):
-    peer = wireguard_peer.get(db, id=id)
-    if not peer:
-        raise HTTPException(status_code=404, detail="Peer not found")
-    # Обновляем в БД
-    peer = wireguard_peer.update(db, db_obj=peer, obj_in=peer_in)
-    # В реальном обновлении WireGuard нужно удалить старый пир и добавить заново, если изменился ключ или allowed_ips.
-    # Для простоты реализуем только обновление allowed_ips и endpoint через повторное добавление.
-    # Упростим: удалим и добавим заново.
-    try:
-        remove_peer(peer.public_key)
-        add_peer(peer.public_key, peer.allowed_ips, peer.endpoint)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update peer in WireGuard: {e}")
-    return peer
-
-@router.delete("/{id}", response_model=WireGuardPeerOut)
-def delete_peer(
-    id: int,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_superuser)
-):
-    peer = wireguard_peer.get(db, id=id)
-    if not peer:
-        raise HTTPException(status_code=404, detail="Peer not found")
-    # Удаляем из WireGuard
-    try:
-        remove_peer(peer.public_key)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to remove peer from WireGuard: {e}")
-    # Мягкое удаление в БД
-    peer = wireguard_peer.remove(db, id=id)
-    return peer
+  return (
+    <>
+      <div style={{ height: 600, width: '100%' }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+          <Typography variant="h5">WireGuard Peers</Typography>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => {}}>
+            Добавить
+          </Button>
+        </Stack>
+        <DataGrid
+          rows={peers}
+          columns={columns}
+          loading={loading}
+          pageSizeOptions={[10, 25, 50, 100]}
+        />
+      </div>
+      <ConfirmDialog
+        open={deleteId !== null}
+        message="Вы уверены, что хотите удалить пир?"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteId(null)}
+      />
+    </>
+  );
+}

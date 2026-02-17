@@ -6,6 +6,9 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import api from '@/api/axios';
 import { Venue } from '@/types';
+import { useSnackbar } from '@/hooks/useSnackbar';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { LoadingScreen } from '@/components/LoadingScreen';
 
 interface VenuesListProps {
   onEdit: (id: number) => void;
@@ -15,6 +18,8 @@ interface VenuesListProps {
 export default function VenuesList({ onEdit, onAdd }: VenuesListProps) {
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const { showSuccess, showError } = useSnackbar();
 
   useEffect(() => {
     fetchVenues();
@@ -25,15 +30,25 @@ export default function VenuesList({ onEdit, onAdd }: VenuesListProps) {
     try {
       const response = await api.get('/venues');
       setVenues(response.data);
+    } catch (err) {
+      showError('Не удалось загрузить список площадок');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm('Удалить площадку?')) {
-      await api.delete(`/venues/${id}`);
+  const handleDeleteClick = (id: number) => setDeleteId(id);
+
+  const handleConfirmDelete = async () => {
+    if (!deleteId) return;
+    try {
+      await api.delete(`/venues/${deleteId}`);
+      showSuccess('Площадка удалена');
       fetchVenues();
+    } catch (err) {
+      showError('Ошибка при удалении');
+    } finally {
+      setDeleteId(null);
     }
   };
 
@@ -59,7 +74,7 @@ export default function VenuesList({ onEdit, onAdd }: VenuesListProps) {
           <IconButton size="small" onClick={() => onEdit(params.row.id)}>
             <EditIcon />
           </IconButton>
-          <IconButton size="small" onClick={() => handleDelete(params.row.id)}>
+          <IconButton size="small" onClick={() => handleDeleteClick(params.row.id)}>
             <DeleteIcon />
           </IconButton>
         </Stack>
@@ -67,20 +82,30 @@ export default function VenuesList({ onEdit, onAdd }: VenuesListProps) {
     },
   ];
 
+  if (loading && venues.length === 0) return <LoadingScreen message="Загрузка площадок..." />;
+
   return (
-    <div style={{ height: 600, width: '100%' }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h5">Площадки</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={onAdd}>
-          Добавить
-        </Button>
-      </Stack>
-      <DataGrid
-        rows={venues}
-        columns={columns}
-        loading={loading}
-        pageSizeOptions={[10, 25, 50, 100]}
+    <>
+      <div style={{ height: 600, width: '100%' }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+          <Typography variant="h5">Площадки</Typography>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={onAdd}>
+            Добавить
+          </Button>
+        </Stack>
+        <DataGrid
+          rows={venues}
+          columns={columns}
+          loading={loading}
+          pageSizeOptions={[10, 25, 50, 100]}
+        />
+      </div>
+      <ConfirmDialog
+        open={deleteId !== null}
+        message="Вы уверены, что хотите удалить площадку?"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteId(null)}
       />
-    </div>
+    </>
   );
 }

@@ -33,7 +33,8 @@ async def telegram_init(request: Request, db: Session = Depends(get_db)):
     state = secrets.token_urlsafe(32)
     
     redis = await get_redis()
-    await redis.setex(f"tg:init:{state}", 300, f"{mac}:{venue_id}")
+    # Сохраняем данные сессии на 5 минут. Используем | как разделитель, т.к. MAC содержит двоеточия
+    await redis.setex(f"tg:init:{state}", 300, f"{mac}|{venue_id}")
     
     bot_link = f"https://t.me/{BOT_USERNAME}?start={state}"
     
@@ -59,7 +60,8 @@ async def telegram_callback(
     if not init_data:
         raise HTTPException(status_code=400, detail="Invalid or expired state")
     
-    mac, venue_id = init_data.decode().split(":")
+    # init_data уже строка, разделяем по |
+    mac, venue_id = init_data.split("|")
     
     # Создаём или обновляем профиль пользователя
     profile = db.query(UserProfile).filter(UserProfile.mac_address == mac).first()

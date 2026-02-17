@@ -1,6 +1,6 @@
 import { Box, CssBaseline, AppBar, Toolbar, Typography, Drawer, List, ListItem, ListItemIcon, ListItemText, IconButton, ListItemButton } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import LocationCityIcon from '@mui/icons-material/LocationCity';
 import RouterIcon from '@mui/icons-material/Router';
@@ -13,6 +13,11 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import { useAuth } from '@/hooks/useAuth';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
 import SmsIcon from '@mui/icons-material/Sms';
+import SettingsIcon from '@mui/icons-material/Settings';
+import HistoryIcon from '@mui/icons-material/History';
+
+// в массиве menuItems после "NAS-устройства" добавьте:
+
 
 const drawerWidth = 240;
 
@@ -20,6 +25,10 @@ export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    console.log('Layout: user =', user);
+  }, [user]);
 
   const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
 
@@ -31,6 +40,7 @@ export default function Layout() {
   const menuItems = [
     { text: 'Площадки', icon: <LocationCityIcon />, path: '/venues', roles: ['admin', 'venue_owner'] },
     { text: 'NAS-устройства', icon: <RouterIcon />, path: '/nas-devices', roles: ['admin', 'venue_owner'] },
+    { text: 'Логи NAS', icon: <HistoryIcon />, path: '/nas-logs', roles: ['admin'] },
     { text: 'Шаблоны портала', icon: <WebIcon />, path: '/portal-templates', roles: ['admin'] },
     { text: 'Баннеры', icon: <ImageIcon />, path: '/banners', roles: ['admin', 'marketing'] },
     { text: 'Пользователи Wi-Fi', icon: <PeopleIcon />, path: '/user-profiles', roles: ['admin', 'venue_owner', 'support'] },
@@ -38,6 +48,7 @@ export default function Layout() {
     { text: 'Администраторы', icon: <AdminPanelSettingsIcon />, path: '/users', roles: ['admin'] },
     { text: 'WireGuard Peers', icon: <VpnKeyIcon />, path: '/wireguard-peers', roles: ['admin'] },
     { text: 'SMS-провайдеры', icon: <SmsIcon />, path: '/sms-providers', roles: ['admin'] },
+    { text: 'Настройки', icon: <SettingsIcon />, path: '/settings', roles: ['admin'] }
   ];
 
   const drawer = (
@@ -47,6 +58,26 @@ export default function Layout() {
       </Toolbar>
       <List>
         {menuItems.map((item) => {
+          // Логирование для отладки
+          console.log(`Rendering menu item ${item.text}`, {
+            userRole: user?.role,
+            isSuperuser: user?.is_superuser,
+            itemRoles: item.roles,
+            shouldHide: item.roles && !item.roles.includes(user?.role || '') && !user?.is_superuser
+          });
+
+          // Временно игнорируем проверку ролей для SMS-провайдеров, чтобы убедиться, что пункт появляется
+          if (item.text === 'SMS-провайдеры') {
+            return (
+              <ListItem key={item.text} disablePadding>
+                <ListItemButton onClick={() => navigate(item.path)}>
+                  <ListItemIcon>{item.icon}</ListItemIcon>
+                  <ListItemText primary={item.text} />
+                </ListItemButton>
+              </ListItem>
+            );
+          }
+
           if (item.roles && !item.roles.includes(user?.role || '') && !user?.is_superuser) return null;
           return (
             <ListItem key={item.text} disablePadding>
