@@ -59,3 +59,9 @@ def _remove_peer_from_config(public_key: str):
             new_lines.append(line)
     with open(config_path, "w") as f:
         f.writelines(new_lines)
+
+def generate_keypair():
+    """Генерирует пару ключей WireGuard, возвращает (private_key, public_key)"""
+    privkey = subprocess.check_output(["wg", "genkey"]).decode().strip()
+    pubkey = subprocess.check_output(["wg", "pubkey"], input=privkey.encode()).decode().strip()
+    return privkey, pubkey        

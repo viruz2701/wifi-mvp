@@ -14,6 +14,9 @@ from .event import Event
 from .banner import Banner
 from .nas_status_history import NASStatusHistory      # новая модель
 from .audit_log import AuditLog                        # новая модель
+from .radius_attribute import RadiusAttribute
+from .tariff_radius_attribute import TariffRadiusAttribute
+
 
 __all__ = [
     "Base",
@@ -32,4 +35,6 @@ __all__ = [
     "Banner",
     "NASStatusHistory",   # добавить сюда
     "AuditLog",           # добавить сюда
+    "RadiusAttribute",
+    "TariffRadiusAttribute",
 ]

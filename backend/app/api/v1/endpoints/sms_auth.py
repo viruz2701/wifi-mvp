@@ -5,9 +5,8 @@ import random
 import string
 from app.db.session import get_db
 from app.core.redis_client import get_redis
-from app.core.sms import get_sms_provider_by_type, get_sms_adapter
+from app.core.sms import send_sms_with_fallback
 from app.models.sms_code import SMSCode, CodeMethod
-from app.models.sms_provider import SMSProviderType
 from app.models.user_profile import UserProfile
 from app.schemas.sms import SMSRequest, SMSVerify
 
@@ -29,29 +28,25 @@ async def sms_request(request: SMSRequest, db: Session = Depends(get_db)):
     code = generate_code(4)
     expires_at = datetime.utcnow() + timedelta(minutes=5)
 
-    # Получаем активного провайдера для SMS (тип rocketsms)
-    provider = get_sms_provider_by_type(db, SMSProviderType.ROCKETSMS)
-    provider_id = provider.id if provider else None
-
-    # Сохраняем в БД с указанием метода и провайдера
+    # Сохраняем в БД
     sms_code = SMSCode(
         phone_number=request.phone,
         code=code,
         expires_at=expires_at,
         venue_id=request.venue_id,
         method=CodeMethod.SMS,
-        provider_id=provider_id
+        provider_id=None
     )
     db.add(sms_code)
     db.commit()
 
-    # Отправляем SMS
-    if provider:
-        adapter = get_sms_adapter(provider)
-        await adapter.send(request.phone, code)  # убрали mac
+    # Отправляем SMS через fallback-механизм
+    success = await send_sms_with_fallback(db, request.phone, code)
+    if not success:
+        # Если ни один провайдер не сработал, логируем предупреждение
+        print(f"Warning: No SMS provider available for {request.phone}, code={code}")
     else:
-        # Заглушка: выводим в лог
-        print(f"SMS to {request.phone}: code={code}")
+        print(f"SMS sent to {request.phone}, code={code}")
 
     return {"message": "Code sent"}
 

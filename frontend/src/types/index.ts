@@ -90,3 +90,46 @@ export interface ActivityReportItem {
   sessions: number;
   unique_users: number;
 }
+
+export type SocialActionType = 'like' | 'share' | 'subscribe' | 'follow';
+export type SocialNetwork = 'vk' | 'telegram' | 'instagram' | 'facebook' | 'viber';
+
+export interface SocialAction {
+  id: number;
+  name: string;
+  description?: string;
+  type: SocialActionType;
+  network: SocialNetwork;
+  config: Record<string, any>;
+  is_active: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface VenueSocialAction {
+  id: number;
+  venue_id: number;
+  action_id: number;
+  reward_tariff_id?: number;
+  reward_duration_hours: number;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface RadiusAttribute {
+  id: number;
+  name: string;
+  vendor_id?: number;
+  is_proprietary: boolean;
+  description?: string;
+  format_hint?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface TariffRadiusAttribute {
+  id: number;
+  tariff_id: number;
+  attribute: RadiusAttribute;
+  value: string;
+}

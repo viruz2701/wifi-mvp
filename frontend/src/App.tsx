@@ -17,6 +17,19 @@ import SmsProvidersPage from './pages/SmsProviders';
 import TelegramAuthPage from './pages/TelegramAuthPage';
 import SettingsPage from './pages/Settings';
 import NasLogs from './pages/NasLogs'; // будет создан позже
+import CrmProvidersPage from './pages/CrmProviders';
+import SocialActionsPage from './pages/SocialActions';
+import RadiusAttributesPage from './pages/RadiusAttributes';
+import TariffsPage from './pages/Tariffs';
+
+// внутри <Routes> добавьте:
+
+
+// внутри <Routes> добавьте:
+
+
+// Внутри <Routes> добавьте:
+
 
 function App() {
   return (
@@ -42,11 +55,15 @@ function App() {
             <Route path="nas-devices" element={<NasDevicesPage />} />
             <Route path="nas-logs" element={<NasLogs />} />
             <Route path="banners" element={<BannersPage />} />
+            <Route path="/social-actions" element={<SocialActionsPage />} />
             <Route path="user-profiles" element={<UserProfilesPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="portal-templates" element={<PortalTemplatesPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="/crm-providers" element={<CrmProvidersPage />} />
+            <Route path="/radius-attributes" element={<RadiusAttributesPage />} />
+            <Route path="/tariffs" element={<TariffsPage />} />
           </Route>
         </Routes>
       </SnackbarProvider>

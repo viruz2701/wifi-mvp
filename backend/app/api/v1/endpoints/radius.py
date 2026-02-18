@@ -12,36 +12,48 @@ router = APIRouter()
 
 @router.post("/authorize")
 async def radius_authorize(request: Request, db: Session = Depends(get_db)):
-    """
-    RADIUS authorization endpoint.
-    Ожидает JSON от freeradius-rest.
-    Возвращает Access-Accept или Access-Reject с возможными атрибутами скорости.
-    """
     data = await request.json()
     mac = data.get("Calling-Station-Id", "").replace("-", ":").upper()
     
-    # Проверяем авторизацию в Redis (установлена при успешном входе через SMS/Call/Telegram)
     redis = await get_redis()
     authorized = await redis.get(f"auth:mac:{mac}")
     if not authorized:
         return {"result": "Access-Reject"}
     
-    # Получаем профиль пользователя
     profile = db.query(UserProfile).filter(UserProfile.mac_address == mac).first()
     if not profile:
-        # Если профиль не найден, но есть ключ в Redis – возможно, нужно создать профиль?
-        # На всякий случай отклоняем, чтобы избежать несоответствий.
         return {"result": "Access-Reject"}
     
-    # Проверяем наличие активного тарифа
     attributes = {}
     if profile.current_tariff_id and profile.tariff_expires_at and profile.tariff_expires_at > datetime.utcnow():
         tariff = db.get(TariffPlan, profile.current_tariff_id)
         if tariff:
+            # Базовые атрибуты скорости (оставляем для обратной совместимости)
             if tariff.speed_limit_up_kbps:
                 attributes["WISPr-Bandwidth-Max-Up"] = str(tariff.speed_limit_up_kbps)
             if tariff.speed_limit_down_kbps:
                 attributes["WISPr-Bandwidth-Max-Down"] = str(tariff.speed_limit_down_kbps)
+            
+            # Добавляем все привязанные RADIUS-атрибуты
+            from app.models.tariff_radius_attribute import TariffRadiusAttribute
+            from app.models.radius_attribute import RadiusAttribute
+            tariff_attrs = db.query(TariffRadiusAttribute).filter(
+                TariffRadiusAttribute.tariff_id == tariff.id,
+                TariffRadiusAttribute.deleted_at.is_(None)
+            ).all()
+            for ta in tariff_attrs:
+                attr = ta.attribute
+                if attr.vendor_id:
+                    # VSA: формируем как словарь или строку
+                    # Обычно freeradius-rest ожидает строку вида "VendorId:Attribute:Value"
+                    # Но можно и объект. Используем формат, понятный freeradius.
+                    # Например: "VendorSpecific" : "14988:Rate-Limit=1M/1M"
+                    # Или отдельный ключ. Уточним по документации.
+                    # В текущей реализации, видимо, используется простой словарь.
+                    # Для надёжности отправим как строку в формате "Vendor-Id:Attribute-Name=Value"
+                    attributes[f"Vendor-Specific-{attr.vendor_id}"] = f"{attr.name}={ta.value}"
+                else:
+                    attributes[attr.name] = ta.value
     
     response = {"result": "Access-Accept"}
     if attributes:
@@ -126,3 +138,4 @@ async def radius_accounting(request: Request, db: Session = Depends(get_db)):
             db.commit()
     
     return {"result": "ok"}
+

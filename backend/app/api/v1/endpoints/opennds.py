@@ -1,5 +1,6 @@
 import random
 import string
+import logging
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -13,8 +14,10 @@ from app.models.user_profile import UserProfile
 from app.models.sms_code import SMSCode
 from app.models.nas_device import NASDevice, NASDeviceType
 from app.core.redis_client import get_redis
-from app.core.sms import get_active_sms_provider, get_sms_adapter
 from app.nas import get_nas_instance
+from app.core.sms import send_sms_with_fallback
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -112,12 +115,11 @@ async def opennds_auth_request(
     db.add(sms_code)
     db.commit()
 
-    provider = get_active_sms_provider(db)
-    if provider:
-        adapter = get_sms_adapter(provider)
-        await adapter.send(phone, code)
+    success = await send_sms_with_fallback(db, phone, code)
+    if not success:
+        logger.warning(f"No SMS provider available for {phone}, code={code}")
     else:
-        print(f"SMS to {phone}: code={code}")
+        logger.info(f"SMS sent to {phone}, code={code}")
 
     return RedirectResponse(url=f"/api/v1/portal/opennds/verify?tok={tok}&phone={phone}", status_code=302)
 

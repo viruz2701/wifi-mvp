@@ -3,6 +3,10 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import re
+import random
+import string
+import json
+from typing import Optional
 from app.db.session import get_db
 from app.models.venue import Venue
 from app.models.portal_template import PortalTemplate
@@ -10,10 +14,8 @@ from app.models.user_profile import UserProfile
 from app.models.banner import Banner
 from app.models.sms_code import SMSCode
 from app.core.redis_client import get_redis
-from app.core.sms import get_active_sms_provider, get_sms_adapter
+from app.core.sms import send_sms_with_fallback
 from app.core.validators import validate_phone_number, normalize_phone_number
-import random
-import string
 
 router = APIRouter()
 
@@ -134,12 +136,13 @@ async def auth_request(
     db.add(sms_code)
     db.commit()
 
-    provider = get_active_sms_provider(db)
-    if provider:
-        adapter = get_sms_adapter(provider)
-        await adapter.send(phone, code)
+    # Отправляем SMS через fallback
+    success = await send_sms_with_fallback(db, phone, code)
+    if not success:
+        # Логируем, но не прерываем поток
+        print(f"Warning: No SMS provider available for {phone}, code={code}")
     else:
-        print(f"SMS to {phone}: code={code}")
+        print(f"SMS sent to {phone}, code={code}")
 
     return RedirectResponse(url=f"/portal/{venue_id}/verify?phone={phone}&mac={mac}", status_code=302)
 
@@ -209,6 +212,9 @@ async def verify_code(
     phone: str = Form(...),
     mac: str = Form(...),
     code: str = Form(...),
+    email: Optional[str] = Form(None),
+    full_name: Optional[str] = Form(None),
+    marketing_consent: bool = Form(False),
     db: Session = Depends(get_db)
 ):
     """Проверка кода и редирект на welcome."""
@@ -227,6 +233,7 @@ async def verify_code(
         await redis.setex(f"block:mac:{mac}", 300, "1")
         return RedirectResponse(url=f"/portal/{venue_id}/auth?error=blocked&mac={mac}&phone={phone}", status_code=302)
 
+    # Поиск кода
     sms_code = db.query(SMSCode).filter(
         SMSCode.phone_number == phone,
         SMSCode.code == code,
@@ -239,17 +246,36 @@ async def verify_code(
     sms_code.is_used = True
     db.add(sms_code)
 
+    # Создаём или обновляем профиль
     profile = db.query(UserProfile).filter(UserProfile.mac_address == mac).first()
     if not profile:
-        profile = UserProfile(mac_address=mac, phone_number=phone, first_seen=datetime.utcnow())
+        profile = UserProfile(
+            mac_address=mac,
+            phone_number=phone,
+            first_seen=datetime.utcnow(),
+            email=email,
+            full_name=full_name,
+            marketing_consent=marketing_consent
+        )
         db.add(profile)
     else:
         profile.last_seen = datetime.utcnow()
         profile.phone_number = phone
+        if email:
+            profile.email = email
+        if full_name:
+            profile.full_name = full_name
+        if marketing_consent is not None:
+            profile.marketing_consent = marketing_consent
     db.commit()
     db.refresh(profile)
 
+    # Авторизация в Redis
     await redis.setex(f"auth:mac:{mac}", 28800, "1")
+
+    # Очищаем ключ попыток (опционально)
+    await redis.delete(key_attempt)
+
     return RedirectResponse(url=f"/portal/{venue_id}/welcome?mac={mac}", status_code=302)
 
 @router.get("/{venue_id}/welcome", response_class=HTMLResponse)

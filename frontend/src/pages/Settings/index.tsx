@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Paper, Typography, TextField, Button, Stack, Alert, CircularProgress } from '@mui/material';
+import {
+  Paper, Typography, TextField, Button, Stack, Alert, CircularProgress, Divider,
+} from '@mui/material';
 import api from '@/api/axios';
 import { useSnackbar } from '@/hooks/useSnackbar';
 import { LoadingScreen } from '@/components/LoadingScreen';
@@ -8,6 +10,8 @@ interface Settings {
   telegram_bot_token: string;
   telegram_bot_username: string;
   telegram_bot_webhook_url: string;
+  wireguard_server_public_key: string;
+  wireguard_server_endpoint: string;
 }
 
 const SettingsPage: React.FC = () => {
@@ -15,6 +19,8 @@ const SettingsPage: React.FC = () => {
     telegram_bot_token: '',
     telegram_bot_username: '',
     telegram_bot_webhook_url: '',
+    wireguard_server_public_key: '',
+    wireguard_server_endpoint: '',
   });
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -28,7 +34,13 @@ const SettingsPage: React.FC = () => {
   const fetchSettings = async () => {
     setInitialLoading(true);
     try {
-      const keys = ['telegram_bot_token', 'telegram_bot_username', 'telegram_bot_webhook_url'];
+      const keys: (keyof Settings)[] = [
+        'telegram_bot_token',
+        'telegram_bot_username',
+        'telegram_bot_webhook_url',
+        'wireguard_server_public_key',
+        'wireguard_server_endpoint',
+      ];
       const promises = keys.map(key => api.get(`/settings/${key}`).catch(() => ({ data: { value: '' } })));
       const results = await Promise.all(promises);
       const newSettings: any = {};
@@ -67,6 +79,7 @@ const SettingsPage: React.FC = () => {
         errors.telegram_bot_webhook_url = 'Некорректный URL';
       }
     }
+    // WireGuard поля не обязательны
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -93,6 +106,8 @@ const SettingsPage: React.FC = () => {
   return (
     <Paper sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>Настройки системы</Typography>
+      
+      <Typography variant="h6" sx={{ mt: 2 }}>Telegram бот</Typography>
       <Stack spacing={2}>
         <TextField
           label="Telegram Bot Token"
@@ -120,10 +135,33 @@ const SettingsPage: React.FC = () => {
           error={!!validationErrors.telegram_bot_webhook_url}
           helperText={validationErrors.telegram_bot_webhook_url}
         />
-        <Button variant="contained" onClick={handleSave} disabled={loading}>
-          {loading ? <CircularProgress size={24} /> : 'Сохранить'}
-        </Button>
       </Stack>
+
+      <Divider sx={{ my: 3 }} />
+
+      <Typography variant="h6" gutterBottom>WireGuard (для подключения к NAS)</Typography>
+      <Stack spacing={2}>
+        <TextField
+          label="Публичный ключ сервера"
+          value={settings.wireguard_server_public_key}
+          onChange={handleChange('wireguard_server_public_key')}
+          fullWidth
+          multiline
+          rows={2}
+          placeholder="Публичный ключ WireGuard сервера"
+        />
+        <TextField
+          label="Endpoint сервера"
+          value={settings.wireguard_server_endpoint}
+          onChange={handleChange('wireguard_server_endpoint')}
+          fullWidth
+          placeholder="vpn.example.com:51820"
+        />
+      </Stack>
+
+      <Button variant="contained" onClick={handleSave} disabled={loading} sx={{ mt: 2 }}>
+        {loading ? <CircularProgress size={24} /> : 'Сохранить'}
+      </Button>
     </Paper>
   );
 };

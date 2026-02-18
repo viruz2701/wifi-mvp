@@ -24,3 +24,8 @@ class WireGuardPeerOut(WireGuardPeerBase):
 
     class Config:
         from_attributes = True
+
+class WireGuardPeerWithNames(WireGuardPeerOut):
+    nas_name: str
+    venue_name: str
+    venue_id: int

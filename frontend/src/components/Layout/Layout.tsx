@@ -15,6 +15,14 @@ import VpnKeyIcon from '@mui/icons-material/VpnKey';
 import SmsIcon from '@mui/icons-material/Sms';
 import SettingsIcon from '@mui/icons-material/Settings';
 import HistoryIcon from '@mui/icons-material/History';
+import BusinessIcon from '@mui/icons-material/Business';
+import ThumbUpIcon from '@mui/icons-material/ThumbUp';
+import PriceCheckIcon from '@mui/icons-material/PriceCheck';
+
+// в menuItems после "RADIUS атрибуты" или где удобно:
+// в menuItems:
+// в массиве menuItems:
+
 
 // в массиве menuItems после "NAS-устройства" добавьте:
 
@@ -43,11 +51,17 @@ export default function Layout() {
     { text: 'Логи NAS', icon: <HistoryIcon />, path: '/nas-logs', roles: ['admin'] },
     { text: 'Шаблоны портала', icon: <WebIcon />, path: '/portal-templates', roles: ['admin'] },
     { text: 'Баннеры', icon: <ImageIcon />, path: '/banners', roles: ['admin', 'marketing'] },
+    { text: 'Социальные акции', icon: <ThumbUpIcon />, path: '/social-actions', roles: ['admin'] },
+    
+    { text: 'Тарифы', icon: <PriceCheckIcon />, path: '/tariffs', roles: ['admin'] },
+
     { text: 'Пользователи Wi-Fi', icon: <PeopleIcon />, path: '/user-profiles', roles: ['admin', 'venue_owner', 'support'] },
     { text: 'Отчёты', icon: <AssessmentIcon />, path: '/reports', roles: ['admin', 'marketing'] },
     { text: 'Администраторы', icon: <AdminPanelSettingsIcon />, path: '/users', roles: ['admin'] },
     { text: 'WireGuard Peers', icon: <VpnKeyIcon />, path: '/wireguard-peers', roles: ['admin'] },
+    { text: 'RADIUS атрибуты', icon: <VpnKeyIcon />, path: '/radius-attributes', roles: ['admin'] },
     { text: 'SMS-провайдеры', icon: <SmsIcon />, path: '/sms-providers', roles: ['admin'] },
+    { text: 'CRM-провайдеры', icon: <BusinessIcon />, path: '/crm-providers', roles: ['admin'] },
     { text: 'Настройки', icon: <SettingsIcon />, path: '/settings', roles: ['admin'] }
   ];
 

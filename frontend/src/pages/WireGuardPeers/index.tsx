@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import { Button, IconButton, Stack, Typography } from '@mui/material';
+import { IconButton, Stack, Typography, Tooltip } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import AddIcon from '@mui/icons-material/Add';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import api from '@/api/axios';
 import { useSnackbar } from '@/hooks/useSnackbar';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -17,6 +17,9 @@ interface WireGuardPeer {
   is_active: boolean;
   created_at: string;
   updated_at?: string;
+  nas_name: string;
+  venue_name: string;
+  venue_id: number;
 }
 
 export default function WireGuardPeers() {
@@ -56,27 +59,66 @@ export default function WireGuardPeers() {
     }
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    showSuccess('Публичный ключ скопирован');
+  };
+
   const columns: GridColDef[] = [
     { field: 'id', headerName: 'ID', width: 70 },
-    { field: 'nas_device_id', headerName: 'NAS Device', width: 120 },
-    { field: 'public_key', headerName: 'Public Key', width: 300 },
+    { field: 'nas_name', headerName: 'NAS устройство', width: 200 },
+    { field: 'venue_name', headerName: 'Площадка', width: 150 },
+    {
+      field: 'public_key',
+      headerName: 'Публичный ключ',
+      width: 400,
+      renderCell: (params) => (
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ width: '100%' }}>
+          <Typography
+            variant="body2"
+            sx={{
+              fontFamily: 'monospace',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              flex: 1,
+            }}
+          >
+            {params.value}
+          </Typography>
+          <Tooltip title="Копировать ключ">
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                copyToClipboard(params.value);
+              }}
+            >
+              <ContentCopyIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Stack>
+      ),
+    },
     { field: 'allowed_ips', headerName: 'Allowed IPs', width: 150 },
     { field: 'endpoint', headerName: 'Endpoint', width: 150 },
     {
       field: 'is_active',
-      headerName: 'Active',
+      headerName: 'Активен',
       width: 100,
       type: 'boolean',
     },
     {
       field: 'actions',
       headerName: 'Действия',
-      width: 120,
+      width: 100,
       renderCell: (params) => (
         <Stack direction="row" spacing={1}>
-          <IconButton size="small" onClick={() => handleDeleteClick(params.row.id)}>
-            <DeleteIcon />
-          </IconButton>
+          <Tooltip title="Удалить пир">
+            <IconButton size="small" onClick={() => handleDeleteClick(params.row.id)}>
+              <DeleteIcon />
+            </IconButton>
+          </Tooltip>
         </Stack>
       ),
     },
@@ -89,15 +131,17 @@ export default function WireGuardPeers() {
       <div style={{ height: 600, width: '100%' }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
           <Typography variant="h5">WireGuard Peers</Typography>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => {}}>
-            Добавить
-          </Button>
         </Stack>
         <DataGrid
           rows={peers}
           columns={columns}
           loading={loading}
           pageSizeOptions={[10, 25, 50, 100]}
+          initialState={{
+            sorting: {
+              sortModel: [{ field: 'id', sort: 'desc' }],
+            },
+          }}
         />
       </div>
       <ConfirmDialog

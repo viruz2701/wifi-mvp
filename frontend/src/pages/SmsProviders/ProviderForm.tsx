@@ -36,6 +36,7 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
     type: 'rocketsms' as SmsProviderType,
     config: {},
     is_active: true,
+    priority: 0,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -48,6 +49,7 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
         type: provider.type,
         config: provider.config,
         is_active: provider.is_active,
+        priority: provider.priority || 0,
       });
     } else {
       setFormData({
@@ -55,6 +57,7 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
         type: 'rocketsms' as SmsProviderType,
         config: {},
         is_active: true,
+        priority: 0,
       });
     }
     setValidationErrors({});
@@ -69,14 +72,24 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
     }
   };
 
+  const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    // преобразуем в число, если не пусто
+    const numValue = value === '' ? 0 : parseInt(value, 10);
+    setFormData((prev) => ({ ...prev, [name]: numValue }));
+    if (validationErrors[name]) {
+      setValidationErrors((prev) => ({ ...prev, [name]: '' }));
+    }
+  };
+
   const handleConfigChange = (field: string, value: any) => {
     setFormData((prev) => ({
       ...prev,
       config: { ...prev.config, [field]: value },
     }));
-    // очищаем ошибку для config
-    if (validationErrors.config) {
-      setValidationErrors((prev) => ({ ...prev, config: '' }));
+    // очищаем ошибку для этого поля (если есть)
+    if (validationErrors[field]) {
+      setValidationErrors((prev) => ({ ...prev, [field]: '' }));
     }
   };
 
@@ -89,7 +102,7 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
     setFormData({
       ...formData,
       type: newType,
-      config: {},
+      config: {}, // сбрасываем конфиг при смене типа
     });
     setValidationErrors({});
   };
@@ -116,7 +129,16 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
         if (!formData.config.api_key) {
           errors.api_key = 'API ключ обязателен';
         }
-        // Можно добавить проверку api_secret, если он есть
+        if (!formData.config.api_secret) {
+          errors.api_secret = 'API секрет обязателен';
+        }
+      } else if (formData.type === 'websms') {
+        if (!formData.config.user) {
+          errors.user = 'Логин (user) обязателен';
+        }
+        if (!formData.config.apikey) {
+          errors.apikey = 'API ключ (apikey) обязателен';
+        }
       }
     }
 
@@ -221,6 +243,40 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
             />
           </Box>
         );
+      case 'websms':
+        return (
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>Настройки WebSMS.by</Typography>
+            <TextField
+              fullWidth
+              margin="dense"
+              label="Логин (user)"
+              value={formData.config.user || ''}
+              onChange={(e) => handleConfigChange('user', e.target.value)}
+              required
+              error={!!validationErrors.user}
+              helperText={validationErrors.user || "Номер телефона в формате MSISDN"}
+            />
+            <TextField
+              fullWidth
+              margin="dense"
+              label="API ключ (apikey)"
+              value={formData.config.apikey || ''}
+              onChange={(e) => handleConfigChange('apikey', e.target.value)}
+              required
+              error={!!validationErrors.apikey}
+              helperText={validationErrors.apikey}
+            />
+            <TextField
+              fullWidth
+              margin="dense"
+              label="Отправитель (sender, опционально)"
+              value={formData.config.sender || ''}
+              onChange={(e) => handleConfigChange('sender', e.target.value)}
+              helperText="Альфа-имя отправителя"
+            />
+          </Box>
+        );
       default:
         return null;
     }
@@ -246,7 +302,9 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
         >
           {providerTypes.map((type) => (
             <MenuItem key={type} value={type}>
-              {type === 'rocketsms' ? 'RocketSMS' : 'CallPassword'}
+              {type === 'rocketsms' ? 'RocketSMS' : 
+               type === 'callpassword' ? 'CallPassword' : 
+               type === 'websms' ? 'WebSMS.by' : type}
             </MenuItem>
           ))}
         </TextField>
@@ -261,6 +319,17 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
           required
           error={!!validationErrors.name}
           helperText={validationErrors.name}
+        />
+
+        <TextField
+          fullWidth
+          margin="dense"
+          name="priority"
+          label="Приоритет (меньше = выше)"
+          type="number"
+          value={formData.priority}
+          onChange={handleNumberChange}
+          helperText="Порядок использования при fallback"
         />
 
         {renderConfigFields()}

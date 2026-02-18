@@ -11,3 +11,13 @@ from .local_user import local_user
 from .sms_code import sms_code
 from .sms_provider import sms_provider
 from .wireguard_peer import wireguard_peer
+from .tariff import tariff
+from .radius_attribute import radius_attribute
+from .tariff_radius_attribute import tariff_radius_attribute
+
+__all__ = [
+    # ... существующие ...
+    "tariff",
+    "radius_attribute",
+    "tariff_radius_attribute",
+]

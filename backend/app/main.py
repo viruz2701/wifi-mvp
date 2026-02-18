@@ -8,8 +8,8 @@ from app.api.v1.endpoints import (
     user_profiles, sessions, local_users, netflow,
     wireguard, portal_preview, portal_templates, banners,
     reports, export, call_auth, telegram_auth, opennds,
-    builtin_templates,  # добавлен импорт для предустановленных шаблонов
-    portal,  # <-- ДОБАВЛЕНО
+    builtin_templates,
+    portal,
 )
 from app.core.rate_limit import RateLimitMiddleware
 from app.core.rate_limit_api import APIRateLimitMiddleware
@@ -19,14 +19,21 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from app.api.v1.endpoints import settings as settings_router
 from app.api.v1.endpoints import internal
 from app.api.v1.endpoints import nas_status
+from app.api.v1.endpoints import crm_providers
+from app.api.v1.endpoints import social_actions, social_verify
+from app.api.v1.endpoints import radius_attributes, tariffs
 
+# Создаём приложение FastAPI с отключённым редиректом слешей
+app = FastAPI(
+    title="WiFi Auth Platform MVP",
+    version="0.2.0",
+    # redirect_slashes=True  (по умолчанию True, можно вообще удалить эту строку)
+)
 
-app = FastAPI(title="WiFi Auth Platform MVP", version="0.2.0")
-
-# CORS middleware (для разработки)
+# CORS middleware - для разработки разрешаем все origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv("FRONTEND_URL", "http://localhost")],
+    allow_origins=["*"],  # или можно оставить как было, но добавить текущий origin
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -64,10 +71,14 @@ app.include_router(banners.router, prefix="/api/v1/banners", tags=["banners"])
 app.include_router(reports.router, prefix="/api/v1/reports", tags=["reports"])
 app.include_router(export.router, prefix="/api/v1/export", tags=["export"])
 app.include_router(nas_status.router, prefix="/api/v1", tags=["nas"])
+app.include_router(crm_providers.router, prefix="/api/v1", tags=["crm"])
+app.include_router(social_actions.router, prefix="/api/v1", tags=["social"])
+app.include_router(social_verify.router, prefix="/api/v1", tags=["social"])
+app.include_router(tariffs.router, prefix="/api/v1", tags=["tariffs"])
+app.include_router(radius_attributes.router, prefix="/api/v1", tags=["radius_attributes"])
+# Обратите внимание: tariffs.router подключён только один раз!
 
-
-
-# <-- ДОБАВЛЕН РОУТЕР ПОРТАЛА
+# Роутер портала
 app.include_router(portal.router, prefix="/portal", tags=["portal"])
 
 # Метрики Prometheus

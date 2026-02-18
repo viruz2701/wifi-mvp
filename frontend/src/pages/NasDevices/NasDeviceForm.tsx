@@ -10,6 +10,8 @@ import {
   FormControlLabel,
   Alert,
   MenuItem,
+  Box,
+  Typography,
 } from '@mui/material';
 import { getNasDevice, createNasDevice, updateNasDevice } from '@/api/nasDevices';
 import { getVenues } from '@/api/venues';
@@ -33,8 +35,8 @@ export default function NasDeviceForm({ open, onClose, onSaved, deviceId }: NasD
     api_username: null,
     api_password: null,
     wireguard_pubkey: null,
-    wireguard_ip: null,
     is_active: true,
+    generate_wireguard_keys: false,
   });
   const [venues, setVenues] = useState<Venue[]>([]);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
@@ -47,10 +49,15 @@ export default function NasDeviceForm({ open, onClose, onSaved, deviceId }: NasD
 
   useEffect(() => {
     if (open && deviceId) {
-      getNasDevice(deviceId).then(res => {
-        // API возвращает данные без секрета, поэтому устанавливаем secret в пустую строку
-        setForm({ ...res.data, secret: '' });
-      }).catch(() => setApiError('Ошибка загрузки данных'));
+      getNasDevice(deviceId)
+        .then(res => {
+          setForm({
+            ...res.data,
+            secret: '',
+            generate_wireguard_keys: false,
+          });
+        })
+        .catch(() => setApiError('Ошибка загрузки данных'));
     } else if (open) {
       setForm({
         venue_id: venues[0]?.id || 1,
@@ -61,15 +68,21 @@ export default function NasDeviceForm({ open, onClose, onSaved, deviceId }: NasD
         api_username: null,
         api_password: null,
         wireguard_pubkey: null,
-        wireguard_ip: null,
         is_active: true,
+        generate_wireguard_keys: false,
       });
     }
+    setErrors({});
+    setApiError('');
   }, [open, deviceId, venues]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value === '' ? null : value }));
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
+    setForm((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value === '' ? null : value,
+    }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
@@ -81,11 +94,14 @@ export default function NasDeviceForm({ open, onClose, onSaved, deviceId }: NasD
     const result: any = {};
     for (const key in data) {
       const value = data[key as keyof NasDeviceFormValues];
-      if (value !== null && value !== '') {
+      if (value !== null && value !== '' && key !== 'generate_wireguard_keys') {
         result[key] = value;
       }
     }
-    // При редактировании, если secret не указан, не отправляем его
+    if (data.generate_wireguard_keys) {
+      result.generate_wireguard_keys = true;
+      delete result.wireguard_pubkey;
+    }
     if (deviceId && !data.secret) {
       delete result.secret;
     }
@@ -94,18 +110,18 @@ export default function NasDeviceForm({ open, onClose, onSaved, deviceId }: NasD
 
   const handleSubmit = async () => {
     try {
-      await nasDeviceSchema.validate(form, { abortEarly: false });
+      await nasDeviceSchema.validate(form, { abortEarly: false, context: { isNew: !deviceId } });
       setErrors({});
 
       setLoading(true);
       setApiError('');
+      const payload = cleanForm(form);
       if (deviceId) {
-        await updateNasDevice(deviceId, cleanForm(form));
+        await updateNasDevice(deviceId, payload);
       } else {
-        await createNasDevice(cleanForm(form));
+        await createNasDevice(payload);
       }
       onSaved();
-      onClose();
     } catch (err: any) {
       if (err.name === 'ValidationError') {
         const validationErrors: Record<string, string | undefined> = {};
@@ -114,12 +130,19 @@ export default function NasDeviceForm({ open, onClose, onSaved, deviceId }: NasD
         });
         setErrors(validationErrors);
       } else {
-        setApiError(err.response?.data?.detail || 'Ошибка сохранения');
+        // Обработка HTTP-ошибок
+        if (err.response?.status === 409) {
+          setApiError(err.response?.data?.detail || 'Устройство с таким IP уже существует');
+        } else {
+          setApiError(err.response?.data?.detail || 'Ошибка сохранения');
+        }
       }
     } finally {
       setLoading(false);
     }
   };
+
+  const isGenerating = form.generate_wireguard_keys;
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -182,7 +205,7 @@ export default function NasDeviceForm({ open, onClose, onSaved, deviceId }: NasD
           onChange={handleChange}
           error={!!errors.secret}
           helperText={errors.secret}
-          required={!deviceId} // обязателен только при создании
+          required={!deviceId}
         />
         <TextField
           margin="dense"
@@ -201,6 +224,23 @@ export default function NasDeviceForm({ open, onClose, onSaved, deviceId }: NasD
           value={form.api_password || ''}
           onChange={handleChange}
         />
+
+        <Box sx={{ mt: 2, mb: 1 }}>
+          <Typography variant="subtitle2">WireGuard</Typography>
+          {!deviceId && (
+            <FormControlLabel
+              control={
+                <Checkbox
+                  name="generate_wireguard_keys"
+                  checked={form.generate_wireguard_keys}
+                  onChange={handleChange}
+                />
+              }
+              label="Сгенерировать ключи автоматически"
+            />
+          )}
+        </Box>
+
         <TextField
           margin="dense"
           name="wireguard_pubkey"
@@ -210,15 +250,17 @@ export default function NasDeviceForm({ open, onClose, onSaved, deviceId }: NasD
           rows={2}
           value={form.wireguard_pubkey || ''}
           onChange={handleChange}
+          disabled={isGenerating}
+          required={!deviceId && !isGenerating}
+          helperText={
+            isGenerating
+              ? 'Ключи будут сгенерированы на сервере'
+              : deviceId
+              ? 'Оставьте пустым, если не хотите менять'
+              : 'Введите публичный ключ или включите генерацию'
+          }
         />
-        <TextField
-          margin="dense"
-          name="wireguard_ip"
-          label="WireGuard IP"
-          fullWidth
-          value={form.wireguard_ip || ''}
-          onChange={handleChange}
-        />
+
         <FormControlLabel
           control={<Checkbox checked={form.is_active} onChange={handleCheckbox} />}
           label="Активно"

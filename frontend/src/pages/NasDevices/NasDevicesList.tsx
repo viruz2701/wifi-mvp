@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import { Button, IconButton, Stack, Typography, Chip } from '@mui/material';
+import { Button, IconButton, Stack, Typography, Chip, Tooltip } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
+import InfoIcon from '@mui/icons-material/Info';
+import VpnKeyIcon from '@mui/icons-material/VpnKey';
 import api from '@/api/axios';
 import { NASDevice } from '@/types';
 import { useSnackbar } from '@/hooks/useSnackbar';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { LoadingScreen } from '@/components/LoadingScreen';
+import NASConnectionInfo from './NASConnectionInfo'; // компонент из Этапа 4
 
 interface NasDevicesListProps {
   onEdit: (id: number) => void;
@@ -19,6 +22,8 @@ export default function NasDevicesList({ onEdit, onAdd }: NasDevicesListProps) {
   const [devices, setDevices] = useState<NASDevice[]>([]);
   const [loading, setLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [selectedNasId, setSelectedNasId] = useState<number | null>(null);
   const { showSuccess, showError } = useSnackbar();
 
   useEffect(() => {
@@ -52,6 +57,16 @@ export default function NasDevicesList({ onEdit, onAdd }: NasDevicesListProps) {
     }
   };
 
+  const handleInfoClick = (id: number) => {
+    setSelectedNasId(id);
+    setInfoOpen(true);
+  };
+
+  const handleInfoClose = () => {
+    setInfoOpen(false);
+    setSelectedNasId(null);
+  };
+
   const columns: GridColDef[] = [
     { field: 'id', headerName: 'ID', width: 70 },
     { field: 'name', headerName: 'Название', width: 200 },
@@ -59,19 +74,47 @@ export default function NasDevicesList({ onEdit, onAdd }: NasDevicesListProps) {
     { field: 'ip_address', headerName: 'IP адрес', width: 150 },
     { field: 'venue_id', headerName: 'Площадка', width: 100 },
     {
+      field: 'wireguard',
+      headerName: 'WireGuard',
+      width: 120,
+      renderCell: (params) => {
+        const hasWireguard = params.row.wireguard_pubkey;
+        return (
+          <Tooltip title={hasWireguard ? 'WireGuard настроен' : 'WireGuard не настроен'}>
+            <Chip
+              icon={<VpnKeyIcon />}
+              label={hasWireguard ? 'Да' : 'Нет'}
+              color={hasWireguard ? 'success' : 'default'}
+              size="small"
+              variant={hasWireguard ? 'filled' : 'outlined'}
+            />
+          </Tooltip>
+        );
+      },
+    },
+    {
       field: 'is_active',
       headerName: 'Статус',
       width: 100,
       renderCell: (params) => (
-        <Chip label={params.value ? 'Активно' : 'Неактивно'} color={params.value ? 'success' : 'default'} size="small" />
+        <Chip
+          label={params.value ? 'Активно' : 'Неактивно'}
+          color={params.value ? 'success' : 'default'}
+          size="small"
+        />
       ),
     },
     {
       field: 'actions',
       headerName: 'Действия',
-      width: 120,
+      width: 180,
       renderCell: (params) => (
         <Stack direction="row" spacing={1}>
+          <Tooltip title="Информация о подключении">
+            <IconButton size="small" onClick={() => handleInfoClick(params.row.id)}>
+              <InfoIcon />
+            </IconButton>
+          </Tooltip>
           <IconButton size="small" onClick={() => onEdit(params.row.id)}>
             <EditIcon />
           </IconButton>
@@ -107,6 +150,13 @@ export default function NasDevicesList({ onEdit, onAdd }: NasDevicesListProps) {
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeleteId(null)}
       />
+      {selectedNasId && (
+        <NASConnectionInfo
+          open={infoOpen}
+          onClose={handleInfoClose}
+          nasId={selectedNasId}
+        />
+      )}
     </>
   );
 }

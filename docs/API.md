@@ -1,64 +1,21 @@
-API.md – описание эндпоинтов
-markdown
-# API документация WiFi Auth Platform
+# API документация
 
-Полная документация API доступна в интерактивном формате Swagger по адресу:
+## Новые эндпоинты в Этапе 0
 
-**`/api/v1/docs`** (например, `http://localhost:8000/api/v1/docs`)
+### Тарифы и площадки
+- `GET /api/v1/venues/{id}/tariffs` – список тарифов, доступных на площадке.
+- `POST /api/v1/venues/{id}/tariffs` – привязка тарифа к площадке (требует `tariff_id`, `priority`, `is_available`).
+- `DELETE /api/v1/venues/{id}/tariffs/{tariff_id}` – удаление связи.
 
-Swagger предоставляет возможность тестировать эндпоинты прямо в браузере и содержит детальные схемы запросов и ответов.
+### Встроенные шаблоны портала
+- `GET /builtin-templates` – список предустановленных шаблонов.
+- `POST /builtin-templates/{id}/import?venue_id=...` – импорт шаблона для площадки.
 
-## Основные группы эндпоинтов
+### Rate limiting
+Для эндпоинтов `/call/*`, `/telegram/*`, `/hotel/*` введены ограничения:
+- `/call/request` – 10 запросов в минуту с одного IP.
+- Остальные – 5 запросов в минуту.
 
-| Префикс                | Описание |
-|------------------------|----------|
-| `/api/v1/auth`         | Аутентификация (вход, регистрация, SMS-авторизация) |
-| `/api/v1/users`        | Управление администраторами |
-| `/api/v1/venues`       | Площадки |
-| `/api/v1/nas-devices`  | NAS-устройства |
-| `/api/v1/portal-templates` | Шаблоны портала |
-| `/api/v1/banners`      | Баннеры |
-| `/api/v1/user-profiles` | Профили Wi-Fi пользователей |
-| `/api/v1/sessions`     | Сессии |
-| `/api/v1/reports`      | Отчёты |
-| `/api/v1/export`       | Экспорт данных (сессии, логи авторизаций) |
-| `/api/v1/radius`       | Внутренние эндпоинты для RADIUS-сервера |
-| `/api/v1/wireguard/peers` | Управление WireGuard пирами |
-| `/api/v1/netflow/records` | Приём NetFlow записей (используется слушателем) |
-
-## Аутентификация
-
-Большинство эндпоинтов требуют JWT-токен, который передаётся в заголовке:
-Authorization: Bearer <token>
-
-text
-
-Токен получается при вызове `POST /api/v1/auth/login` с логином и паролем администратора.
-
-## Примеры запросов
-
-### Получение списка площадок
-```bash
-curl -X GET http://localhost/api/v1/venues \
-  -H "Authorization: Bearer <токен>"
-Создание площадки
-bash
-curl -X POST http://localhost/api/v1/venues \
-  -H "Authorization: Bearer <токен>" \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Новая площадка", "domain":"cafe.example.com"}'
-Экспорт сессий в CSV
-bash
-curl -X GET "http://localhost/api/v1/export/user-sessions?from_date=2026-01-01&to_date=2026-02-15&format=csv" \
-  -H "Authorization: Bearer <токен>" \
-  --output sessions.csv
-Более подробную информацию о каждом эндпоинте, включая все параметры, типы данных и возможные ошибки, смотрите в Swagger.
-
-text
-
-После создания этих файлов выполните:
-
-```bash
-git add docs/
-git commit -m "docs: add installation guide, user guide and API overview"
-git push origin main
+## Обновлённые эндпоинты
+- `/api/v1/auth/sms/request` – теперь требует валидацию номера телефона.
+- `/api/v1/radius/authorize` – возвращает атрибуты тарифа.

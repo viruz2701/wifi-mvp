@@ -14,12 +14,14 @@ class NASDeviceBase(BaseModel):
     is_active: bool = True
 
 class NASDeviceCreate(NASDeviceBase):
-    secret: str  # открытый секрет для шифрования
+    secret: str
     api_password: Optional[str] = None
+    generate_wireguard_keys: Optional[bool] = False   # новое поле
 
 class NASDeviceUpdate(NASDeviceBase):
     secret: Optional[str] = None
     api_password: Optional[str] = None
+    # для обновления не поддерживаем генерацию ключей
 
 class NASDeviceOut(NASDeviceBase):
     id: int

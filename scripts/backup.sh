@@ -3,11 +3,13 @@ set -e
 
 BACKUP_DIR=/backups
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-DB_NAME=wifi_auth
-DB_USER=wifi_user
-DB_PASSWORD=wifi_pass
-DB_HOST=timescaledb
-DB_PORT=5432
+
+# Переменные окружения должны быть заданы в docker-compose или в контейнере
+DB_NAME=${POSTGRES_DB:-wifi_auth}
+DB_USER=${POSTGRES_USER:-wifi_user}
+DB_PASSWORD=${POSTGRES_PASSWORD}
+DB_HOST=${POSTGRES_HOST:-timescaledb}
+DB_PORT=${POSTGRES_PORT:-5432}
 
 mkdir -p $BACKUP_DIR
 

@@ -3,21 +3,61 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.crud.wireguard_peer import wireguard_peer
-from app.schemas.wireguard_peer import WireGuardPeerCreate, WireGuardPeerUpdate, WireGuardPeerOut
+from app.schemas.wireguard_peer import (
+    WireGuardPeerCreate,
+    WireGuardPeerUpdate,
+    WireGuardPeerOut,
+    WireGuardPeerWithNames
+)
 from app.core.dependencies import get_current_superuser
 from app.core.wireguard import add_peer, remove_peer
 from app.crud.nas_device import nas_device as crud_nas
+from app.models.nas_device import NASDevice
+from app.models.venue import Venue
+from app.models.wireguard_peer import WireGuardPeer
 
 router = APIRouter()
 
-@router.get("", response_model=List[WireGuardPeerOut])
+@router.get("", response_model=List[WireGuardPeerWithNames])
 def read_peers(
     db: Session = Depends(get_db),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
     current_user = Depends(get_current_superuser)
 ):
-    return wireguard_peer.get_multi(db, skip=skip, limit=limit)
+    """Получить список всех WireGuard пиров с названиями NAS и площадок."""
+    # Выполняем запрос с джойнами
+    results = db.query(
+        WireGuardPeer,
+        NASDevice.name.label('nas_name'),
+        Venue.name.label('venue_name'),
+        Venue.id.label('venue_id')
+    ).join(
+        NASDevice, WireGuardPeer.nas_device_id == NASDevice.id
+    ).join(
+        Venue, NASDevice.venue_id == Venue.id
+    ).filter(
+        WireGuardPeer.deleted_at.is_(None)
+    ).offset(skip).limit(limit).all()
+
+    # Формируем список словарей, совместимых со схемой WireGuardPeerWithNames
+    peers_list = []
+    for peer, nas_name, venue_name, venue_id in results:
+        peer_dict = {
+            "id": peer.id,
+            "nas_device_id": peer.nas_device_id,
+            "public_key": peer.public_key,
+            "allowed_ips": peer.allowed_ips,
+            "endpoint": peer.endpoint,
+            "is_active": peer.is_active,
+            "created_at": peer.created_at,
+            "updated_at": peer.updated_at,
+            "nas_name": nas_name,
+            "venue_name": venue_name,
+            "venue_id": venue_id
+        }
+        peers_list.append(peer_dict)
+    return peers_list
 
 @router.post("", response_model=WireGuardPeerOut)
 def create_peer(
