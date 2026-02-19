@@ -16,11 +16,25 @@ from .nas_status_history import NASStatusHistory      # новая модель
 from .audit_log import AuditLog                        # новая модель
 from .radius_attribute import RadiusAttribute
 from .tariff_radius_attribute import TariffRadiusAttribute
+from .crm_provider import CRMProvider
+from .tariff import TariffPlan
+from .venue_crm import VenueCRM
+from .setting import Setting
+from .social_action import SocialAction
+from .user_social_action import UserSocialAction
+from .venue_social_action import VenueSocialAction
+
 
 
 __all__ = [
     "Base",
     "User",
+
+    "SocialAction",
+    "UserSocialAction",
+    "VenueSocialAction",
+
+
     "Venue",
     "NASDevice",
     "UserProfile",
@@ -37,4 +51,8 @@ __all__ = [
     "AuditLog",           # добавить сюда
     "RadiusAttribute",
     "TariffRadiusAttribute",
+    "CRMProvider",
+    "TariffPlan",
+    "VenueCRM",
+    "Setting",
 ]

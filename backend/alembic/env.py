@@ -9,6 +9,9 @@ sys.path.append(str(Path(__file__).parent.parent))
 from app.db.base import Base
 from app.core.config import settings
 from app.models import *  # загружаем все модели
+from app.models.tariff import TariffPlan
+from app.models.venue_crm import VenueCRM
+from app.models.crm_provider import CRMProvider
 from app.models import (
     User, Venue, NASDevice, 
     UserProfile, Session, LocalUser, SMSCode, SMSProvider,  # старые модели этапа 2
