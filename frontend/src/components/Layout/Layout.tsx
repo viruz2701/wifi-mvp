@@ -18,14 +18,7 @@ import HistoryIcon from '@mui/icons-material/History';
 import BusinessIcon from '@mui/icons-material/Business';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import PriceCheckIcon from '@mui/icons-material/PriceCheck';
-
-// в menuItems после "RADIUS атрибуты" или где удобно:
-// в menuItems:
-// в массиве menuItems:
-
-
-// в массиве menuItems после "NAS-устройства" добавьте:
-
+import MenuBookIcon from '@mui/icons-material/MenuBook';
 
 const drawerWidth = 240;
 
@@ -52,9 +45,7 @@ export default function Layout() {
     { text: 'Шаблоны портала', icon: <WebIcon />, path: '/portal-templates', roles: ['admin'] },
     { text: 'Баннеры', icon: <ImageIcon />, path: '/banners', roles: ['admin', 'marketing'] },
     { text: 'Социальные акции', icon: <ThumbUpIcon />, path: '/social-actions', roles: ['admin'] },
-    
     { text: 'Тарифы', icon: <PriceCheckIcon />, path: '/tariffs', roles: ['admin'] },
-
     { text: 'Пользователи Wi-Fi', icon: <PeopleIcon />, path: '/user-profiles', roles: ['admin', 'venue_owner', 'support'] },
     { text: 'Отчёты', icon: <AssessmentIcon />, path: '/reports', roles: ['admin', 'marketing'] },
     { text: 'Администраторы', icon: <AdminPanelSettingsIcon />, path: '/users', roles: ['admin'] },
@@ -62,7 +53,8 @@ export default function Layout() {
     { text: 'RADIUS атрибуты', icon: <VpnKeyIcon />, path: '/radius-attributes', roles: ['admin'] },
     { text: 'SMS-провайдеры', icon: <SmsIcon />, path: '/sms-providers', roles: ['admin'] },
     { text: 'CRM-провайдеры', icon: <BusinessIcon />, path: '/crm-providers', roles: ['admin'] },
-    { text: 'Настройки', icon: <SettingsIcon />, path: '/settings', roles: ['admin'] }
+    { text: 'Настройки', icon: <SettingsIcon />, path: '/settings', roles: ['admin'] },
+    { text: 'Документация', icon: <MenuBookIcon />, onClick: () => window.open('/docs/admin_guide.md', '_blank'), roles: ['admin'] }
   ];
 
   const drawer = (
@@ -72,30 +64,22 @@ export default function Layout() {
       </Toolbar>
       <List>
         {menuItems.map((item) => {
-          // Логирование для отладки
-          console.log(`Rendering menu item ${item.text}`, {
-            userRole: user?.role,
-            isSuperuser: user?.is_superuser,
-            itemRoles: item.roles,
-            shouldHide: item.roles && !item.roles.includes(user?.role || '') && !user?.is_superuser
-          });
-
-          // Временно игнорируем проверку ролей для SMS-провайдеров, чтобы убедиться, что пункт появляется
-          if (item.text === 'SMS-провайдеры') {
-            return (
-              <ListItem key={item.text} disablePadding>
-                <ListItemButton onClick={() => navigate(item.path)}>
-                  <ListItemIcon>{item.icon}</ListItemIcon>
-                  <ListItemText primary={item.text} />
-                </ListItemButton>
-              </ListItem>
-            );
+          // Проверка ролей
+          if (item.roles && !item.roles.includes(user?.role || '') && !user?.is_superuser) {
+            return null;
           }
 
-          if (item.roles && !item.roles.includes(user?.role || '') && !user?.is_superuser) return null;
           return (
             <ListItem key={item.text} disablePadding>
-              <ListItemButton onClick={() => navigate(item.path)}>
+              <ListItemButton
+                onClick={() => {
+                  if (item.onClick) {
+                    item.onClick();
+                  } else if (item.path) {
+                    navigate(item.path);
+                  }
+                }}
+              >
                 <ListItemIcon>{item.icon}</ListItemIcon>
                 <ListItemText primary={item.text} />
               </ListItemButton>

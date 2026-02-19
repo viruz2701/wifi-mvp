@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+// src/pages/WireGuardPeers/index.tsx
+import { useState, useEffect } from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { IconButton, Stack, Typography, Tooltip } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -37,7 +38,7 @@ export default function WireGuardPeers() {
     try {
       const response = await api.get('/wireguard/peers');
       setPeers(response.data);
-    } catch (error) {
+    } catch {
       showError('Не удалось загрузить список пиров');
     } finally {
       setLoading(false);
@@ -52,7 +53,7 @@ export default function WireGuardPeers() {
       await api.delete(`/wireguard/peers/${deleteId}`);
       showSuccess('Пир удалён');
       fetchPeers();
-    } catch (error) {
+    } catch {
       showError('Ошибка при удалении');
     } finally {
       setDeleteId(null);

@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Paper, Typography, FormControl, InputLabel, Select, MenuItem, TextField, Button, Stack, Box } from '@mui/material';
+// src/pages/NasLogs/index.tsx
+import { useState, useEffect, useCallback } from 'react';
+import { Paper, Typography, FormControl, InputLabel, Select, MenuItem, Button, Stack, Box } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -26,51 +27,49 @@ export default function NasLogs() {
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(50);
-  const [total, setTotal] = useState(0);
   const { showError } = useSnackbar();
 
-  useEffect(() => {
-    fetchNasDevices();
-    fetchLogs();
-  }, []);
-
-  useEffect(() => {
-    fetchLogs();
-  }, [selectedNas, fromDate, toDate, page, pageSize]);
-
-  const fetchNasDevices = async () => {
+  const fetchNasDevices = useCallback(async () => {
     try {
       const response = await api.get('/nas-devices');
       setNasDevices(response.data);
-    } catch (err) {
+    } catch {
       showError('Не удалось загрузить список устройств');
     }
-  };
+  }, [showError]);
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     setLoading(true);
     try {
-      const params: any = {
+      const params: Record<string, unknown> = {
         skip: page * pageSize,
         limit: pageSize,
       };
       if (selectedNas) params.nas_device_id = selectedNas;
       if (fromDate) params.from_date = fromDate.toISOString().split('T')[0];
       if (toDate) params.to_date = toDate.toISOString().split('T')[0];
+
       const response = await api.get('/nas-status-history', { params });
       // Обогащаем записи именами устройств
-      const enriched = response.data.map((rec: any) => ({
+      const enriched = response.data.map((rec: NasStatusRecord) => ({
         ...rec,
         nas_name: nasDevices.find(d => d.id === rec.nas_device_id)?.name || `ID ${rec.nas_device_id}`,
       }));
       setRecords(enriched);
-      // Предполагаем, что сервер не возвращает общее количество, поэтому total не обновляем
-    } catch (err) {
+    } catch {
       showError('Ошибка загрузки логов');
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedNas, fromDate, toDate, page, pageSize, nasDevices, showError]);
+
+  useEffect(() => {
+    fetchNasDevices();
+  }, [fetchNasDevices]);
+
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
 
   const columns: GridColDef[] = [
     { field: 'id', headerName: 'ID', width: 70 },
@@ -80,7 +79,13 @@ export default function NasLogs() {
       field: 'checked_at',
       headerName: 'Время проверки',
       width: 200,
-      valueFormatter: (params) => new Date(params.value).toLocaleString(),
+      valueFormatter: (params: { value: unknown }) => {
+        const value = params.value;
+        if (typeof value === 'string') {
+          return new Date(value).toLocaleString();
+        }
+        return '';
+      },
     },
   ];
 
@@ -122,8 +127,6 @@ export default function NasLogs() {
           rows={records}
           columns={columns}
           loading={loading}
-          paginationMode="server"
-          rowCount={total}
           pageSizeOptions={[50, 100, 200]}
           paginationModel={{ page, pageSize }}
           onPaginationModelChange={(model) => {

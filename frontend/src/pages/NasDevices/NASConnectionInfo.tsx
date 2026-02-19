@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, TextField, Box, Typography, Alert, IconButton,
-  InputAdornment,
+  InputAdornment, CircularProgress,
 } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -38,24 +38,14 @@ const NASConnectionInfo: React.FC<NASConnectionInfoProps> = ({ open, onClose, na
   const [nas, setNas] = useState<NASDetail | null>(null);
   const [wgSettings, setWgSettings] = useState<WireGuardSettings | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [privateKey, setPrivateKey] = useState<string | null>(null);
   const { showSuccess, showError } = useSnackbar();
   const mounted = useRef(true);
 
-  useEffect(() => {
-    mounted.current = true;
-    if (open && nasId) {
-      fetchData();
-    }
-    return () => {
-      mounted.current = false;
-    };
-  }, [open, nasId]);
-
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
     setError('');
     try {
       const [nasRes, wgRes] = await Promise.all([
@@ -69,16 +59,26 @@ const NASConnectionInfo: React.FC<NASConnectionInfoProps> = ({ open, onClose, na
         try {
           const privRes = await api.get(`/nas-devices/${nasId}/wireguard-private-key`);
           if (mounted.current) setPrivateKey(privRes.data.private_key);
-        } catch (err) {
-          console.warn('Could not fetch private key', err);
+        } catch {
+          console.warn('Could not fetch private key');
         }
       }
-    } catch (err) {
+    } catch {
       if (mounted.current) setError('Не удалось загрузить данные');
     } finally {
-      if (mounted.current) setLoading(false);
+      if (mounted.current) setIsLoading(false);
     }
-  };
+  }, [nasId]);
+
+  useEffect(() => {
+    mounted.current = true;
+    if (open && nasId) {
+      fetchData();
+    }
+    return () => {
+      mounted.current = false;
+    };
+  }, [open, nasId, fetchData]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -131,22 +131,36 @@ PersistentKeepalive = 25`;
       a.click();
       URL.revokeObjectURL(url);
       showSuccess('Приватный ключ скачан');
-    } catch (err: any) {
-      if (err.response?.status === 404) {
-        showError('Приватный ключ не найден (возможно, введён вручную)');
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'response' in err) {
+        const axiosError = err as { response?: { status?: number; data?: { detail?: string } } };
+        if (axiosError.response?.status === 404) {
+          showError('Приватный ключ не найден (возможно, введён вручную)');
+        } else {
+          showError('Ошибка загрузки ключа');
+        }
       } else {
         showError('Ошибка загрузки ключа');
       }
     }
   };
 
-  if (!nas) return null;
+  if (!nas) {
+    return (
+      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+        <DialogContent>
+          {isLoading ? <CircularProgress /> : <Alert severity="info">Нет данных</Alert>}
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>Подключение к NAS: {nas.name}</DialogTitle>
       <DialogContent>
         {error && <Alert severity="error">{error}</Alert>}
+        {isLoading && <CircularProgress sx={{ display: 'block', mx: 'auto', my: 2 }} />}
         <Box sx={{ mt: 2 }}>
           <Typography variant="subtitle1">Основные параметры</Typography>
           <TextField
@@ -182,7 +196,7 @@ PersistentKeepalive = 25`;
                 readOnly: true,
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton onClick={() => copyToClipboard(nas.wireguard_ip)}>
+                    <IconButton onClick={() => copyToClipboard(nas.wireguard_ip!)}>
                       <ContentCopyIcon />
                     </IconButton>
                   </InputAdornment>
@@ -197,25 +211,27 @@ PersistentKeepalive = 25`;
             margin="dense"
             InputProps={{ readOnly: true }}
           />
-          <TextField
-            label="Пароль API"
-            value={nas.api_password ? (showPassword ? nas.api_password : '••••••••') : 'не указан'}
-            fullWidth
-            margin="dense"
-            InputProps={{
-              readOnly: true,
-              endAdornment: nas.api_password ? (
-                <InputAdornment position="end">
-                  <IconButton onClick={() => setShowPassword(!showPassword)}>
-                    {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                  </IconButton>
-                  <IconButton onClick={() => copyToClipboard(nas.api_password)}>
-                    <ContentCopyIcon />
-                  </IconButton>
-                </InputAdornment>
-              ) : null,
-            }}
-          />
+          {nas.api_password && (
+            <TextField
+              label="Пароль API"
+              value={showPassword ? nas.api_password : '••••••••'}
+              fullWidth
+              margin="dense"
+              InputProps={{
+                readOnly: true,
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={() => setShowPassword(!showPassword)}>
+                      {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                    </IconButton>
+                    <IconButton onClick={() => copyToClipboard(nas.api_password!)}>
+                      <ContentCopyIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+          )}
           <Typography variant="subtitle1" sx={{ mt: 2 }}>Команда SSH</Typography>
           <TextField
             value={getSshCommand()}

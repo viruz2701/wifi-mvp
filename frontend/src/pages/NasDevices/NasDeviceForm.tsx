@@ -12,11 +12,14 @@ import {
   MenuItem,
   Box,
   Typography,
+  Link,
 } from '@mui/material';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { getNasDevice, createNasDevice, updateNasDevice } from '@/api/nasDevices';
 import { getVenues } from '@/api/venues';
 import { Venue } from '@/types';
 import { nasDeviceSchema, NasDeviceFormValues } from '@/validation/nasDeviceSchema';
+import { AxiosError } from 'axios';
 
 interface NasDeviceFormProps {
   open: boolean;
@@ -32,9 +35,9 @@ export default function NasDeviceForm({ open, onClose, onSaved, deviceId }: NasD
     type: 'mikrotik',
     ip_address: '',
     secret: '',
-    api_username: null,
-    api_password: null,
-    wireguard_pubkey: null,
+    api_username: undefined,
+    api_password: undefined,
+    wireguard_pubkey: undefined,
     is_active: true,
     generate_wireguard_keys: false,
   });
@@ -42,6 +45,13 @@ export default function NasDeviceForm({ open, onClose, onSaved, deviceId }: NasD
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
+
+  // Маппинг типа устройства на файл документации
+  const typeToDoc: Record<string, string> = {
+    mikrotik: 'mikrotik_hotspot.md',
+    openwrt: 'openwrt_opennds.md',
+    ubiquiti: 'ubiquiti.md',
+  };
 
   useEffect(() => {
     getVenues().then(res => setVenues(res.data));
@@ -65,9 +75,9 @@ export default function NasDeviceForm({ open, onClose, onSaved, deviceId }: NasD
         type: 'mikrotik',
         ip_address: '',
         secret: '',
-        api_username: null,
-        api_password: null,
-        wireguard_pubkey: null,
+        api_username: undefined,
+        api_password: undefined,
+        wireguard_pubkey: undefined,
         is_active: true,
         generate_wireguard_keys: false,
       });
@@ -81,7 +91,7 @@ export default function NasDeviceForm({ open, onClose, onSaved, deviceId }: NasD
     const checked = (e.target as HTMLInputElement).checked;
     setForm((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value === '' ? null : value,
+      [name]: type === 'checkbox' ? checked : value === '' ? undefined : value,
     }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
@@ -90,11 +100,11 @@ export default function NasDeviceForm({ open, onClose, onSaved, deviceId }: NasD
     setForm((prev) => ({ ...prev, is_active: e.target.checked }));
   };
 
-  const cleanForm = (data: NasDeviceFormValues) => {
-    const result: any = {};
+  const cleanForm = (data: NasDeviceFormValues): Record<string, unknown> => {
+    const result: Record<string, unknown> = {};
     for (const key in data) {
       const value = data[key as keyof NasDeviceFormValues];
-      if (value !== null && value !== '' && key !== 'generate_wireguard_keys') {
+      if (value !== undefined && value !== '' && key !== 'generate_wireguard_keys') {
         result[key] = value;
       }
     }
@@ -122,20 +132,23 @@ export default function NasDeviceForm({ open, onClose, onSaved, deviceId }: NasD
         await createNasDevice(payload);
       }
       onSaved();
-    } catch (err: any) {
-      if (err.name === 'ValidationError') {
+    } catch (err: unknown) {
+      // Validation error from yup
+      if (err && typeof err === 'object' && 'name' in err && err.name === 'ValidationError' && 'inner' in err) {
         const validationErrors: Record<string, string | undefined> = {};
-        err.inner.forEach((e: any) => {
+        (err as { inner: { path?: string; message: string }[] }).inner.forEach((e) => {
           if (e.path) validationErrors[e.path] = e.message;
         });
         setErrors(validationErrors);
-      } else {
-        // Обработка HTTP-ошибок
+      } else if (err instanceof AxiosError) {
+        // HTTP errors
         if (err.response?.status === 409) {
           setApiError(err.response?.data?.detail || 'Устройство с таким IP уже существует');
         } else {
           setApiError(err.response?.data?.detail || 'Ошибка сохранения');
         }
+      } else {
+        setApiError('Ошибка сохранения');
       }
     } finally {
       setLoading(false);
@@ -265,6 +278,22 @@ export default function NasDeviceForm({ open, onClose, onSaved, deviceId }: NasD
           control={<Checkbox checked={form.is_active} onChange={handleCheckbox} />}
           label="Активно"
         />
+
+        {/* Ссылка на документацию */}
+        {form.type && typeToDoc[form.type] && (
+          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+            <Link
+              href={`/docs/equipment/${typeToDoc[form.type]}`}
+              target="_blank"
+              rel="noopener"
+              underline="hover"
+              sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
+            >
+              <OpenInNewIcon fontSize="small" />
+              Инструкция по настройке {form.type}
+            </Link>
+          </Box>
+        )}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Отмена</Button>

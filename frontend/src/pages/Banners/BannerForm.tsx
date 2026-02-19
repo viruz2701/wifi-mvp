@@ -27,7 +27,7 @@ export default function BannerForm({ open, onClose, onSaved, bannerId }: BannerF
   const [form, setForm] = useState<BannerFormValues>({
     venue_id: 1,
     target_url: '',
-    image_url: null,
+    image_url: undefined,
     is_active: true,
   });
   const [venues, setVenues] = useState<Venue[]>([]);
@@ -48,7 +48,7 @@ export default function BannerForm({ open, onClose, onSaved, bannerId }: BannerF
       setForm({
         venue_id: venues[0]?.id || 1,
         target_url: '',
-        image_url: null,
+        image_url: undefined,
         is_active: true,
       });
     }
@@ -56,7 +56,7 @@ export default function BannerForm({ open, onClose, onSaved, bannerId }: BannerF
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value === '' ? null : value }));
+    setForm((prev) => ({ ...prev, [name]: value === '' ? undefined : value }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
@@ -64,11 +64,12 @@ export default function BannerForm({ open, onClose, onSaved, bannerId }: BannerF
     setForm((prev) => ({ ...prev, is_active: e.target.checked }));
   };
 
-  const cleanForm = (data: BannerFormValues) => {
-    const result: any = {};
+  const cleanForm = (data: BannerFormValues): Record<string, unknown> => {
+    const result: Record<string, unknown> = {};
     for (const key in data) {
-      if (data[key as keyof BannerFormValues] !== null) {
-        result[key] = data[key as keyof BannerFormValues];
+      const value = data[key as keyof BannerFormValues];
+      if (value !== undefined) {
+        result[key] = value;
       }
     }
     return result;
@@ -88,15 +89,24 @@ export default function BannerForm({ open, onClose, onSaved, bannerId }: BannerF
       }
       onSaved();
       onClose();
-    } catch (err: any) {
-      if (err.name === 'ValidationError') {
+    } catch (err: unknown) {
+      if (
+        err &&
+        typeof err === 'object' &&
+        'name' in err &&
+        err.name === 'ValidationError' &&
+        'inner' in err
+      ) {
         const validationErrors: Record<string, string | undefined> = {};
-        err.inner.forEach((e: any) => {
+        (err as { inner: { path?: string; message: string }[] }).inner.forEach((e) => {
           if (e.path) validationErrors[e.path] = e.message;
         });
         setErrors(validationErrors);
+      } else if (err && typeof err === 'object' && 'response' in err) {
+        const axiosError = err as { response?: { data?: { detail?: string } } };
+        setApiError(axiosError.response?.data?.detail || 'Ошибка сохранения');
       } else {
-        setApiError(err.response?.data?.detail || 'Ошибка сохранения');
+        setApiError('Ошибка сохранения');
       }
     } finally {
       setLoading(false);

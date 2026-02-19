@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -9,9 +9,9 @@ import {
   FormControlLabel,
   Checkbox,
   Alert,
-  Box,
 } from '@mui/material';
 import api from '@/api/axios';
+import { AxiosError } from 'axios';
 import { Tariff, TariffFormData } from './types';
 
 interface TariffFormProps {
@@ -102,8 +102,12 @@ const TariffForm: React.FC<TariffFormProps> = ({
       }
       onSaved();
       onClose();
-    } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || 'Ошибка сохранения');
+    } catch (err) {
+      if (err instanceof AxiosError) {
+        setError(err.response?.data?.detail || err.message || 'Ошибка сохранения');
+      } else {
+        setError('Ошибка сохранения');
+      }
     } finally {
       setLoading(false);
     }

@@ -1,3 +1,4 @@
+// src/pages/Users/UserForm.tsx
 import { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -15,6 +16,7 @@ import { getUser, createUser, updateUser } from '@/api/users';
 import { getVenues } from '@/api/venues';
 import { Venue } from '@/types';
 import { userSchema, UserFormValues } from '@/validation/userSchema';
+import { AxiosError } from 'axios';
 
 interface UserFormProps {
   open: boolean;
@@ -43,9 +45,11 @@ export default function UserForm({ open, onClose, onSaved, userId }: UserFormPro
 
   useEffect(() => {
     if (open && userId) {
-      getUser(userId).then(res => {
-        setForm({ ...res.data, password: '' });
-      }).catch(() => setApiError('Ошибка загрузки данных'));
+      getUser(userId)
+        .then(res => {
+          setForm({ ...res.data, password: '' });
+        })
+        .catch(() => setApiError('Ошибка загрузки данных'));
     } else if (open) {
       setForm({
         email: '',
@@ -68,8 +72,8 @@ export default function UserForm({ open, onClose, onSaved, userId }: UserFormPro
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.checked }));
   };
 
-  const cleanForm = (data: UserFormValues) => {
-    const result: any = {};
+  const cleanForm = (data: UserFormValues): Record<string, unknown> => {
+    const result: Record<string, unknown> = {};
     for (const key in data) {
       const value = data[key as keyof UserFormValues];
       if (value !== null && value !== '') {
@@ -93,22 +97,29 @@ export default function UserForm({ open, onClose, onSaved, userId }: UserFormPro
 
       setLoading(true);
       setApiError('');
+      const payload = cleanForm(form);
       if (userId) {
-        await updateUser(userId, cleanForm(form));
+        await updateUser(userId, payload);
       } else {
-        await createUser(cleanForm(form));
+        // Для создания пароль обязателен и должен присутствовать
+        if (!payload.password) {
+          throw new Error('Пароль обязателен');
+        }
+        await createUser(payload as Parameters<typeof createUser>[0]); // Приведение типа
       }
       onSaved();
       onClose();
-    } catch (err: any) {
-      if (err.name === 'ValidationError') {
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'name' in err && err.name === 'ValidationError' && 'inner' in err) {
         const validationErrors: Record<string, string | undefined> = {};
-        err.inner.forEach((e: any) => {
+        (err as { inner: { path?: string; message: string }[] }).inner.forEach((e) => {
           if (e.path) validationErrors[e.path] = e.message;
         });
         setErrors(validationErrors);
-      } else {
+      } else if (err instanceof AxiosError) {
         setApiError(err.response?.data?.detail || 'Ошибка сохранения');
+      } else {
+        setApiError(err instanceof Error ? err.message : 'Ошибка сохранения');
       }
     } finally {
       setLoading(false);

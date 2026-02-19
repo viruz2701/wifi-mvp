@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, Typography, Box, FormControl, InputLabel, Select, MenuItem, Button, Alert } from '@mui/material';
+import { useState, useEffect, useCallback } from 'react';
+import { Card, CardContent, Typography, Box, FormControl, InputLabel, Select, MenuItem, Button } from '@mui/material';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import api from '@/api/axios';
 import { useAuth } from '@/hooks/useAuth';
@@ -17,40 +17,48 @@ interface ActivityReportProps {
 export default function ActivityReport({ onError }: ActivityReportProps) {
   const { user } = useAuth();
   const { showError } = useSnackbar();
-  const [venues, setVenues] = useState<any[]>([]);
+  const [venues, setVenues] = useState<{ id: number; name: string }[]>([]);
   const [selectedVenue, setSelectedVenue] = useState<number | ''>('');
   const [fromDate, setFromDate] = useState<Date | null>(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
   const [toDate, setToDate] = useState<Date | null>(new Date());
   const [data, setData] = useState<ActivityReportItem[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const errorHandler = onError || showError;
+  const errorHandler = useCallback((msg: string) => {
+    if (onError) {
+      onError(msg);
+    } else {
+      showError(msg);
+    }
+  }, [onError, showError]);
 
   useEffect(() => {
     if (user?.role === 'admin') {
-      api.get('/venues').then(res => setVenues(res.data)).catch(() => errorHandler('Не удалось загрузить площадки'));
+      api.get('/venues')
+        .then(res => setVenues(res.data))
+        .catch(() => errorHandler('Не удалось загрузить площадки'));
     } else if (user?.venue_id) {
       setSelectedVenue(user.venue_id);
     }
-  }, [user]);
+  }, [user, errorHandler]);
 
-  const fetchReport = async () => {
+  const fetchReport = useCallback(async () => {
     if (!fromDate || !toDate) return;
     setLoading(true);
     try {
-      const params: any = {
+      const params: Record<string, string | number> = {
         from_date: format(fromDate, 'yyyy-MM-dd'),
         to_date: format(toDate, 'yyyy-MM-dd'),
       };
       if (selectedVenue) params.venue_id = selectedVenue;
       const response = await api.get('/reports/activity', { params });
       setData(response.data);
-    } catch (err) {
+    } catch {
       errorHandler('Ошибка загрузки отчёта');
     } finally {
       setLoading(false);
     }
-  };
+  }, [fromDate, toDate, selectedVenue, errorHandler]);
 
   return (
     <Card>
@@ -60,7 +68,11 @@ export default function ActivityReport({ onError }: ActivityReportProps) {
           {user?.role === 'admin' && (
             <FormControl sx={{ minWidth: 200 }}>
               <InputLabel>Площадка</InputLabel>
-              <Select value={selectedVenue} onChange={(e) => setSelectedVenue(e.target.value as number)} label="Площадка">
+              <Select
+                value={selectedVenue}
+                onChange={(e) => setSelectedVenue(e.target.value as number)}
+                label="Площадка"
+              >
                 <MenuItem value="">Все</MenuItem>
                 {venues.map(v => <MenuItem key={v.id} value={v.id}>{v.name}</MenuItem>)}
               </Select>

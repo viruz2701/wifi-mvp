@@ -1,18 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Container } from '@mui/material';
 import CrmProvidersList from './CrmProvidersList';
 import CrmProviderForm from './CrmProviderForm';
 import { CrmProvider } from './types';
 import api from '@/api/axios';
 
-const CrmProvidersPage: React.FC = () => {
+const CrmProvidersPage = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [editingProvider, setEditingProvider] = useState<CrmProvider | null>(null);
   const [providerTypes, setProviderTypes] = useState<string[]>([]);
-
-  useEffect(() => {
-    fetchProviderTypes();
-  }, []);
 
   const fetchProviderTypes = async () => {
     try {
@@ -22,6 +18,10 @@ const CrmProvidersPage: React.FC = () => {
       console.error('Failed to load provider types:', err);
     }
   };
+
+  useEffect(() => {
+    fetchProviderTypes();
+  }, []);
 
   const handleAdd = () => {
     setEditingProvider(null);
@@ -34,8 +34,7 @@ const CrmProvidersPage: React.FC = () => {
   };
 
   const handleSaved = () => {
-    // Перезагрузить список через ререндер компонента CrmProvidersList
-    window.location.reload(); // или использовать state, но для простоты так
+    window.location.reload();
   };
 
   return (

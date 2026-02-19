@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
-  Paper, Typography, TextField, Button, Stack, Alert, CircularProgress, Divider,
+  Paper, Typography, TextField, Button, Stack, CircularProgress, Divider,
 } from '@mui/material';
 import api from '@/api/axios';
 import { useSnackbar } from '@/hooks/useSnackbar';
 import { LoadingScreen } from '@/components/LoadingScreen';
+import { AxiosError } from 'axios';
 
 interface Settings {
   telegram_bot_token: string;
@@ -14,7 +15,7 @@ interface Settings {
   wireguard_server_endpoint: string;
 }
 
-const SettingsPage: React.FC = () => {
+const SettingsPage = () => {
   const [settings, setSettings] = useState<Settings>({
     telegram_bot_token: '',
     telegram_bot_username: '',
@@ -27,11 +28,7 @@ const SettingsPage: React.FC = () => {
   const [validationErrors, setValidationErrors] = useState<Partial<Settings>>({});
   const { showSuccess, showError } = useSnackbar();
 
-  useEffect(() => {
-    fetchSettings();
-  }, []);
-
-  const fetchSettings = async () => {
+  const fetchSettings = useCallback(async () => {
     setInitialLoading(true);
     try {
       const keys: (keyof Settings)[] = [
@@ -41,19 +38,25 @@ const SettingsPage: React.FC = () => {
         'wireguard_server_public_key',
         'wireguard_server_endpoint',
       ];
-      const promises = keys.map(key => api.get(`/settings/${key}`).catch(() => ({ data: { value: '' } })));
+      const promises = keys.map(key =>
+        api.get<{ value: string }>(`/settings/${key}`).catch(() => ({ data: { value: '' } }))
+      );
       const results = await Promise.all(promises);
-      const newSettings: any = {};
+      const newSettings: Partial<Settings> = {};
       keys.forEach((key, idx) => {
         newSettings[key] = results[idx].data.value || '';
       });
-      setSettings(newSettings);
-    } catch (err) {
+      setSettings(newSettings as Settings);
+    } catch {
       showError('Ошибка загрузки настроек');
     } finally {
       setInitialLoading(false);
     }
-  };
+  }, [showError]);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
   const handleChange = (key: keyof Settings) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setSettings(prev => ({ ...prev, [key]: e.target.value }));
@@ -79,7 +82,6 @@ const SettingsPage: React.FC = () => {
         errors.telegram_bot_webhook_url = 'Некорректный URL';
       }
     }
-    // WireGuard поля не обязательны
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -95,7 +97,8 @@ const SettingsPage: React.FC = () => {
       await Promise.all(updates);
       showSuccess('Настройки сохранены');
     } catch (err) {
-      showError('Ошибка сохранения');
+      const errorMessage = err instanceof AxiosError ? err.message : 'Ошибка сохранения';
+      showError(errorMessage);
     } finally {
       setLoading(false);
     }

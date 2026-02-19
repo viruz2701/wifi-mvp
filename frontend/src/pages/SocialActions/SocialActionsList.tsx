@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Paper,
   Table,
@@ -38,9 +38,10 @@ const SocialActionsList: React.FC<SocialActionsListProps> = ({ onEdit, onAdd }) 
     try {
       const response = await api.get('/social/actions');
       setActions(response.data);
-    } catch (err: any) {
-      setError(err.message || 'Ошибка загрузки');
-      showError(err.message || 'Ошибка загрузки');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Ошибка загрузки';
+      setError(errorMessage);
+      showError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -56,8 +57,9 @@ const SocialActionsList: React.FC<SocialActionsListProps> = ({ onEdit, onAdd }) 
       await api.delete(`/social/actions/${id}`);
       showSuccess('Действие удалено');
       fetchActions();
-    } catch (err: any) {
-      showError(err.message || 'Ошибка удаления');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Ошибка удаления';
+      showError(errorMessage);
     }
   };
 

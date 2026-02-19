@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { IconButton, Stack, Typography, Chip, TextField, Button, Box } from '@mui/material';
 import BlockIcon from '@mui/icons-material/Block';
@@ -11,20 +11,22 @@ export default function ProfilesList() {
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({ mac: '', phone: '', venue_id: '' });
 
-  useEffect(() => {
-    fetchProfiles();
-  }, [filters]);
-
-  const fetchProfiles = async () => {
+  const fetchProfiles = useCallback(async () => {
     setLoading(true);
     try {
-      const params = Object.fromEntries(Object.entries(filters).filter(([_, v]) => v));
+      const params = Object.fromEntries(
+        Object.entries(filters).filter(([_, v]) => v)
+      );
       const response = await getUserProfiles(params);
       setProfiles(response.data);
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters]);
+
+  useEffect(() => {
+    fetchProfiles();
+  }, [fetchProfiles]);
 
   const handleToggleBlock = async (id: number, currentBlocked: boolean) => {
     await updateUserProfile(id, { is_blocked: !currentBlocked });
@@ -48,7 +50,11 @@ export default function ProfilesList() {
       headerName: 'Заблокирован',
       width: 120,
       renderCell: (params) => (
-        <Chip label={params.value ? 'Да' : 'Нет'} color={params.value ? 'error' : 'success'} size="small" />
+        <Chip
+          label={params.value ? 'Да' : 'Нет'}
+          color={params.value ? 'error' : 'success'}
+          size="small"
+        />
       ),
     },
     {
@@ -56,7 +62,11 @@ export default function ProfilesList() {
       headerName: 'VIP',
       width: 80,
       renderCell: (params) => (
-        <Chip label={params.value ? 'VIP' : 'Нет'} color={params.value ? 'warning' : 'default'} size="small" />
+        <Chip
+          label={params.value ? 'VIP' : 'Нет'}
+          color={params.value ? 'warning' : 'default'}
+          size="small"
+        />
       ),
     },
     {
@@ -80,10 +90,27 @@ export default function ProfilesList() {
     <div style={{ height: 600, width: '100%' }}>
       <Typography variant="h5" gutterBottom>Профили пользователей</Typography>
       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-        <TextField label="MAC" value={filters.mac} onChange={(e) => setFilters({ ...filters, mac: e.target.value })} size="small" />
-        <TextField label="Телефон" value={filters.phone} onChange={(e) => setFilters({ ...filters, phone: e.target.value })} size="small" />
-        <TextField label="ID площадки" value={filters.venue_id} onChange={(e) => setFilters({ ...filters, venue_id: e.target.value })} size="small" />
-        <Button variant="outlined" onClick={fetchProfiles}>Применить</Button>
+        <TextField
+          label="MAC"
+          value={filters.mac}
+          onChange={(e) => setFilters({ ...filters, mac: e.target.value })}
+          size="small"
+        />
+        <TextField
+          label="Телефон"
+          value={filters.phone}
+          onChange={(e) => setFilters({ ...filters, phone: e.target.value })}
+          size="small"
+        />
+        <TextField
+          label="ID площадки"
+          value={filters.venue_id}
+          onChange={(e) => setFilters({ ...filters, venue_id: e.target.value })}
+          size="small"
+        />
+        <Button variant="outlined" onClick={fetchProfiles}>
+          Применить
+        </Button>
       </Box>
       <DataGrid
         rows={profiles}

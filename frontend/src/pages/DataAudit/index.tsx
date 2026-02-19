@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box, Typography, Button, TextField,
   Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Pagination, Alert, Stack
+  Pagination, Stack
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -20,7 +20,12 @@ interface AuthLog {
   created_at: string;
   mac_address: string;
   phone_number: string | null;
-  data: any;
+  data: Record<string, unknown>;
+}
+
+interface LogsResponse {
+  items: AuthLog[];
+  total_pages: number;
 }
 
 export default function DataAudit() {
@@ -36,32 +41,34 @@ export default function DataAudit() {
   const [totalPages, setTotalPages] = useState(1);
   const { showError } = useSnackbar();
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     setLoading(true);
     try {
-      const params: any = {
+      const params: Record<string, unknown> = {
         page,
         limit: 20,
-        ...filters,
+        mac: filters.mac || undefined,
+        phone: filters.phone || undefined,
         from_date: filters.from_date ? format(filters.from_date, 'yyyy-MM-dd') : undefined,
         to_date: filters.to_date ? format(filters.to_date, 'yyyy-MM-dd') : undefined,
       };
-      const response = await api.get('/export/auth-logs', { params });
+      const response = await api.get<LogsResponse>('/export/auth-logs', { params });
       setLogs(response.data.items);
       setTotalPages(response.data.total_pages);
-    } catch (err) {
+    } catch {
       showError('Ошибка загрузки данных');
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, filters, showError]);
 
-  const handleExport = async (formatType: 'csv' | 'json') => {
-    const params: any = {
+  const handleExport = (formatType: 'csv' | 'json') => {
+    const params: Record<string, string> = {
       format: formatType,
-      ...filters,
-      from_date: filters.from_date ? format(filters.from_date, 'yyyy-MM-dd') : undefined,
-      to_date: filters.to_date ? format(filters.to_date, 'yyyy-MM-dd') : undefined,
+      ...(filters.mac && { mac: filters.mac }),
+      ...(filters.phone && { phone: filters.phone }),
+      ...(filters.from_date && { from_date: format(filters.from_date, 'yyyy-MM-dd') }),
+      ...(filters.to_date && { to_date: format(filters.to_date, 'yyyy-MM-dd') }),
     };
     const url = `/api/v1/export/auth-logs?${new URLSearchParams(params)}`;
     window.open(url, '_blank');
@@ -69,7 +76,7 @@ export default function DataAudit() {
 
   useEffect(() => {
     fetchLogs();
-  }, [page, filters]);
+  }, [fetchLogs]);
 
   if (loading && logs.length === 0) return <LoadingScreen message="Загрузка логов..." />;
 

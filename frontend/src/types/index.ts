@@ -29,6 +29,11 @@ export interface Venue {
   contact_email?: string;
   created_at: string;
   updated_at?: string;
+  crm_enabled?: boolean;
+  show_email_field?: boolean;
+  show_name_field?: boolean;
+  show_marketing_consent?: boolean;
+  allow_nas_connection_info?: boolean;
 }
 
 export interface NASDevice {

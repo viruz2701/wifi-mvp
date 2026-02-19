@@ -164,3 +164,112 @@ text
     :local status [/interface wireguard peers get $peer allowed-address]
     :put "$intf : $pubkey -> $endpoint : $status"
 }
+
+
+
+
+1. Настройка MikroTik (RouterOS) с RADIUS и Hotspot, включая WireGuard для управления
+1.1. Общая схема
+Гостевая сеть – отдельный bridge с DHCP и Hotspot.
+
+RADIUS-авторизация – все запросы авторизации и учёта направляются на сервер платформы.
+
+WireGuard-туннель (опционально) – используется для защищённого управления, если устройство не имеет публичного IP или находится за NAT.
+
+1.2. Настройка WireGuard на MikroTik (если необходимо)
+Предварительно в панели администратора при регистрации NAS-устройства включите опцию «Сгенерировать ключи автоматически». После сохранения вы получите:
+
+Приватный ключ (можно скачать)
+
+Публичный ключ (уже сохранён в платформе)
+
+IP-адрес WireGuard (например, 10.0.0.2/24)
+
+Публичный ключ сервера и endpoint (будут доступны в разделе Настройки → WireGuard)
+
+Теперь настройте WireGuard на MikroTik.
+
+Через командную строку (SSH):
+
+bash
+# Создать интерфейс wg0 с вашим приватным ключом
+/interface wireguard add name=wg0 private-key="ВАШ_ПРИВАТНЫЙ_КЛЮЧ"
+
+# Назначить IP-адрес
+/ip address add address=10.0.0.2/24 interface=wg0
+
+# Добавить пир (сервер платформы)
+/interface wireguard peers add interface=wg0 \
+  public-key="ПУБЛИЧНЫЙ_КЛЮЧ_СЕРВЕРА" \
+  endpoint-address="АДРЕС_СЕРВЕРА" endpoint-port=51820 \
+  allowed-address=10.0.0.0/24
+Проверьте связь: ping 10.0.0.1 (это IP сервера в туннеле).
+
+1.3. Настройка Hotspot с RADIUS
+Шаг 1. Создание bridge для гостевой сети
+
+bash
+/interface bridge add name=bridge_guest
+/ip address add address=192.168.100.1/24 interface=bridge_guest
+Шаг 2. Настройка DHCP-сервера
+
+bash
+/ip pool add name=pool_guest ranges=192.168.100.2-192.168.100.254
+/ip dhcp-server add name=dhcp_guest interface=bridge_guest address-pool=pool_guest
+/ip dhcp-server network add address=192.168.100.0/24 \
+  gateway=192.168.100.1 dns-server=8.8.8.8
+Шаг 3. Включение Hotspot
+
+bash
+/ip hotspot add name=hotspot1 interface=bridge_guest
+/ip hotspot profile set [find] use-radius=yes
+Шаг 4. Добавление RADIUS-сервера
+
+Если используется WireGuard, укажите IP сервера из туннеля (10.0.0.1). Если устройство имеет прямой доступ к серверу, укажите его публичный IP.
+
+bash
+/radius add address=10.0.0.1 secret=ВАШ_RADIUS_SECRET service=hotspot
+/radius incoming set accept=yes
+Шаг 5. Проверка
+
+Убедитесь, что в панели администратора устройство отображается как online.
+
+Подключитесь к гостевой Wi-Fi сети, откройте браузер – должна появиться страница авторизации (встроенная или внешняя, в зависимости от настроек портала).
+
+1.4. Автоматический скрипт для MikroTik
+Сохраните как setup_mikrotik_full.sh:
+
+bash
+#!/bin/bash
+# Полная настройка MikroTik: WireGuard + Hotspot + RADIUS
+
+if [ $# -lt 5 ]; then
+    echo "Использование: $0 <IP_роутера> <RADIUS_секрет> <WG_приватный_ключ> <WG_публичный_ключ_сервера> <WG_сервер_endpoint>"
+    exit 1
+fi
+
+ROUTER_IP=$1
+RADIUS_SECRET=$2
+WG_PRIV=$3
+WG_SERVER_PUB=$4
+WG_ENDPOINT=$5
+
+ssh admin@$ROUTER_IP <<EOF
+# WireGuard
+/interface wireguard add name=wg0 private-key="$WG_PRIV"
+/ip address add address=10.0.0.2/24 interface=wg0
+/interface wireguard peers add interface=wg0 public-key="$WG_SERVER_PUB" endpoint-address=${WG_ENDPOINT%:*} endpoint-port=${WG_ENDPOINT##*:} allowed-address=10.0.0.0/24
+
+# Hotspot
+/interface bridge add name=bridge_guest
+/ip address add address=192.168.100.1/24 interface=bridge_guest
+/ip pool add name=pool_guest ranges=192.168.100.2-192.168.100.254
+/ip dhcp-server add name=dhcp_guest interface=bridge_guest address-pool=pool_guest
+/ip dhcp-server network add address=192.168.100.0/24 gateway=192.168.100.1 dns-server=8.8.8.8
+/ip hotspot add name=hotspot1 interface=bridge_guest
+/ip hotspot profile set [find] use-radius=yes
+/radius add address=10.0.0.1 secret=$RADIUS_SECRET service=hotspot
+/radius incoming set accept=yes
+EOF
+
+echo "Настройка завершена."

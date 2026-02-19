@@ -2,14 +2,10 @@ import { Tabs, Tab, Box } from '@mui/material';
 import { useState } from 'react';
 import ActivityReport from './ActivityReport';
 import { useSnackbar } from '@/hooks/useSnackbar';
-import { LoadingScreen } from '@/components/LoadingScreen';
 
 export default function ReportsPage() {
   const [tab, setTab] = useState(0);
   const { showError } = useSnackbar();
-
-  // Можно передать showError в дочерние компоненты через контекст или пропсы
-  // Для ActivityReport передадим проп onError, чтобы он мог показать уведомление
 
   return (
     <Box>

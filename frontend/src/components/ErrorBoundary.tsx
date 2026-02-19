@@ -1,4 +1,5 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+// src/components/ErrorBoundary.tsx
+import { Component, ErrorInfo, ReactNode } from 'react';
 import { Alert, AlertTitle } from '@mui/material';
 
 interface Props {

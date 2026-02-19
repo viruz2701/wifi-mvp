@@ -26,7 +26,7 @@ export interface CrmProvider {
 export interface CrmProviderFormData {
   name: string;
   type: CrmProviderType;
-  config: Record<string, any>;
+  config: Partial<CrmProviderConfig>;
   is_active: boolean;
   priority: number;
 }

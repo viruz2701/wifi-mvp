@@ -17,19 +17,22 @@ export interface CallPasswordConfig {
 
 // Конфигурация для WebSMS.by
 export interface WebSmsConfig {
-  user: string;          // логин (номер телефона)
-  apikey: string;        // API ключ
-  sender?: string;       // опциональное альфа-имя
+  user: string;
+  apikey: string;
+  sender?: string;
 }
+
+// Объединённый тип конфигурации
+export type SmsProviderConfig = RocketSmsConfig | CallPasswordConfig | WebSmsConfig;
 
 // Основной тип провайдера
 export interface SmsProvider {
   id: number;
   name: string;
   type: SmsProviderType;
-  config: RocketSmsConfig | CallPasswordConfig | WebSmsConfig | Record<string, any>;
+  config: SmsProviderConfig;
   is_active: boolean;
-  priority?: number;      // приоритет (меньше = выше)
+  priority?: number;
   created_at: string;
   updated_at?: string;
 }
@@ -38,7 +41,7 @@ export interface SmsProvider {
 export interface SmsProviderFormData {
   name: string;
   type: SmsProviderType;
-  config: Record<string, any>;
+  config: Partial<SmsProviderConfig>;
   is_active: boolean;
-  priority?: number;      // опционально, можно добавить в форму позже
+  priority?: number;
 }

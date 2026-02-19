@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Box, Typography, Paper, CircularProgress, Alert } from '@mui/material';
 import { QRCodeCanvas as QRCode } from 'qrcode.react';
 
@@ -26,7 +26,7 @@ export const TelegramAuth: React.FC<TelegramAuthProps> = ({ venueId, mac, onSucc
         const data = await response.json();
         setState(data.state);
         setBotLink(data.bot_link);
-      } catch (err) {
+      } catch {
         setError('Ошибка инициализации');
       } finally {
         setLoading(false);
@@ -46,7 +46,7 @@ export const TelegramAuth: React.FC<TelegramAuthProps> = ({ venueId, mac, onSucc
       }
     };
     eventSource.onerror = () => {
-      // Можно обработать ошибку, но пока игнорируем
+      // Игнорируем ошибки
     };
 
     return () => {

@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+// src/pages/PortalTemplates/BuiltinTemplates.tsx
+import { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Button,
-  Grid,
   Card,
   CardMedia,
   CardContent,
@@ -15,9 +15,10 @@ import {
   Select,
   MenuItem,
   Alert,
-  CircularProgress
+  Box,
 } from '@mui/material';
 import api from '@/api/axios';
+import { AxiosError } from 'axios';
 
 interface BuiltinTemplate {
   id: string;
@@ -50,7 +51,7 @@ export const BuiltinTemplates: React.FC<BuiltinTemplatesProps> = ({ open, onClos
     try {
       const response = await api.get('/builtin-templates');
       setTemplates(response.data);
-    } catch (err) {
+    } catch {
       setError('Не удалось загрузить список шаблонов');
     }
   };
@@ -59,7 +60,7 @@ export const BuiltinTemplates: React.FC<BuiltinTemplatesProps> = ({ open, onClos
     try {
       const response = await api.get('/venues');
       setVenues(response.data);
-    } catch (err) {
+    } catch {
       setError('Не удалось загрузить список площадок');
     }
   };
@@ -75,8 +76,12 @@ export const BuiltinTemplates: React.FC<BuiltinTemplatesProps> = ({ open, onClos
       await api.post(`/builtin-templates/${templateId}/import?venue_id=${selectedVenue}`);
       onImported();
       onClose();
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Ошибка импорта');
+    } catch (err) {
+      if (err instanceof AxiosError) {
+        setError(err.response?.data?.detail || 'Ошибка импорта');
+      } else {
+        setError('Ошибка импорта');
+      }
     } finally {
       setLoading(false);
     }
@@ -96,35 +101,33 @@ export const BuiltinTemplates: React.FC<BuiltinTemplatesProps> = ({ open, onClos
             {venues.map(v => <MenuItem key={v.id} value={v.id}>{v.name}</MenuItem>)}
           </Select>
         </FormControl>
-        <Grid container spacing={2} sx={{ mt: 1 }}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2 }}>
           {templates.map(tmpl => (
-            <Grid item xs={12} sm={6} md={4} key={tmpl.id}>
-              <Card>
-                {tmpl.preview && (
-                  <CardMedia
-                    component="img"
-                    height="140"
-                    image={tmpl.preview}
-                    alt={tmpl.name}
-                  />
-                )}
-                <CardContent>
-                  <Typography variant="h6">{tmpl.name}</Typography>
-                  <Typography variant="body2">Тип: {tmpl.type}</Typography>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    sx={{ mt: 1 }}
-                    onClick={() => handleImport(tmpl.id)}
-                    disabled={!selectedVenue || loading}
-                  >
-                    {loading ? 'Импорт...' : 'Использовать'}
-                  </Button>
-                </CardContent>
-              </Card>
-            </Grid>
+            <Card key={tmpl.id} sx={{ width: { xs: '100%', sm: 'calc(50% - 8px)', md: 'calc(33.333% - 16px)' } }}>
+              {tmpl.preview && (
+                <CardMedia
+                  component="img"
+                  height="140"
+                  image={tmpl.preview}
+                  alt={tmpl.name}
+                />
+              )}
+              <CardContent>
+                <Typography variant="h6">{tmpl.name}</Typography>
+                <Typography variant="body2">Тип: {tmpl.type}</Typography>
+                <Button
+                  variant="contained"
+                  size="small"
+                  sx={{ mt: 1 }}
+                  onClick={() => handleImport(tmpl.id)}
+                  disabled={!selectedVenue || loading}
+                >
+                  {loading ? 'Импорт...' : 'Использовать'}
+                </Button>
+              </CardContent>
+            </Card>
           ))}
-        </Grid>
+        </Box>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Закрыть</Button>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   Paper,
   Table,
@@ -20,6 +20,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import api from '@/api/axios';
 import { useSnackbar } from '@/hooks/useSnackbar';
+import { AxiosError } from 'axios';
 import { RadiusAttribute } from './types';
 
 interface RadiusAttributesListProps {
@@ -33,22 +34,24 @@ const RadiusAttributesList: React.FC<RadiusAttributesListProps> = ({ onEdit, onA
   const [error, setError] = useState('');
   const { showSuccess, showError } = useSnackbar();
 
-  const fetchAttributes = async () => {
+  const fetchAttributes = useCallback(async () => {
     setLoading(true);
     try {
       const response = await api.get('/radius-attributes/');
       setAttributes(response.data);
-    } catch (err: any) {
-      setError(err.message || 'Ошибка загрузки');
-      showError(err.message || 'Ошибка загрузки');
+      setError('');
+    } catch (err) {
+      const errorMessage = err instanceof AxiosError ? err.message : 'Ошибка загрузки';
+      setError(errorMessage);
+      showError(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [showError]);
 
   useEffect(() => {
     fetchAttributes();
-  }, []);
+  }, [fetchAttributes]);
 
   const handleDelete = async (id: number) => {
     if (!window.confirm('Удалить RADIUS-атрибут?')) return;
@@ -56,8 +59,9 @@ const RadiusAttributesList: React.FC<RadiusAttributesListProps> = ({ onEdit, onA
       await api.delete(`/radius-attributes/${id}`);
       showSuccess('Атрибут удалён');
       fetchAttributes();
-    } catch (err: any) {
-      showError(err.message || 'Ошибка удаления');
+    } catch (err) {
+      const errorMessage = err instanceof AxiosError ? err.message : 'Ошибка удаления';
+      showError(errorMessage);
     }
   };
 

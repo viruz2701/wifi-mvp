@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+// src/pages/CrmProviders/CrmProviderForm.tsx
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -14,6 +15,7 @@ import {
   Typography,
 } from '@mui/material';
 import api from '@/api/axios';
+import { AxiosError } from 'axios';
 import { CrmProvider, CrmProviderFormData } from './types';
 
 interface CrmProviderFormProps {
@@ -71,7 +73,7 @@ const CrmProviderForm: React.FC<CrmProviderFormProps> = ({
     }
   };
 
-  const handleConfigChange = (field: string, value: any) => {
+  const handleConfigChange = (field: string, value: string | number | boolean) => {
     setFormData((prev) => ({
       ...prev,
       config: { ...prev.config, [field]: value },
@@ -79,6 +81,19 @@ const CrmProviderForm: React.FC<CrmProviderFormProps> = ({
     if (validationErrors[field]) {
       setValidationErrors((prev) => ({ ...prev, [field]: '' }));
     }
+  };
+
+  const handleFieldMappingChange = (field: string, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      config: {
+        ...prev.config,
+        field_mapping: {
+          ...(prev.config.field_mapping as Record<string, string> || {}),
+          [field]: value,
+        },
+      },
+    }));
   };
 
   const handleCheckbox = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -103,11 +118,12 @@ const CrmProviderForm: React.FC<CrmProviderFormProps> = ({
     }
 
     if (formData.type === 'bitrix24') {
-      if (!formData.config.webhook_url) {
+      const config = formData.config as { webhook_url?: string };
+      if (!config.webhook_url) {
         errors.webhook_url = 'URL вебхука обязателен';
       } else {
         try {
-          new URL(formData.config.webhook_url);
+          new URL(config.webhook_url);
         } catch {
           errors.webhook_url = 'Некорректный URL';
         }
@@ -132,8 +148,12 @@ const CrmProviderForm: React.FC<CrmProviderFormProps> = ({
       }
       onSaved();
       onClose();
-    } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || 'Ошибка сохранения');
+    } catch (err) {
+      if (err instanceof AxiosError) {
+        setError(err.response?.data?.detail || err.message || 'Ошибка сохранения');
+      } else {
+        setError('Ошибка сохранения');
+      }
     } finally {
       setLoading(false);
     }
@@ -141,7 +161,8 @@ const CrmProviderForm: React.FC<CrmProviderFormProps> = ({
 
   const renderConfigFields = () => {
     switch (formData.type) {
-      case 'bitrix24':
+      case 'bitrix24': {
+        const config = formData.config as { webhook_url?: string; field_mapping?: Record<string, string> };
         return (
           <Box sx={{ mt: 2 }}>
             <Typography variant="subtitle2" gutterBottom>Настройки Bitrix24</Typography>
@@ -149,7 +170,7 @@ const CrmProviderForm: React.FC<CrmProviderFormProps> = ({
               fullWidth
               margin="dense"
               label="URL вебхука"
-              value={formData.config.webhook_url || ''}
+              value={config.webhook_url || ''}
               onChange={(e) => handleConfigChange('webhook_url', e.target.value)}
               required
               error={!!validationErrors.webhook_url}
@@ -159,32 +180,33 @@ const CrmProviderForm: React.FC<CrmProviderFormProps> = ({
               fullWidth
               margin="dense"
               label="Маппинг поля телефона (опционально)"
-              value={formData.config.field_mapping?.phone || 'PHONE'}
-              onChange={(e) => handleConfigChange('field_mapping', { ...formData.config.field_mapping, phone: e.target.value })}
+              value={config.field_mapping?.phone || 'PHONE'}
+              onChange={(e) => handleFieldMappingChange('phone', e.target.value)}
             />
             <TextField
               fullWidth
               margin="dense"
               label="Маппинг поля email"
-              value={formData.config.field_mapping?.email || 'EMAIL'}
-              onChange={(e) => handleConfigChange('field_mapping', { ...formData.config.field_mapping, email: e.target.value })}
+              value={config.field_mapping?.email || 'EMAIL'}
+              onChange={(e) => handleFieldMappingChange('email', e.target.value)}
             />
             <TextField
               fullWidth
               margin="dense"
               label="Маппинг поля имени"
-              value={formData.config.field_mapping?.full_name || 'NAME'}
-              onChange={(e) => handleConfigChange('field_mapping', { ...formData.config.field_mapping, full_name: e.target.value })}
+              value={config.field_mapping?.full_name || 'NAME'}
+              onChange={(e) => handleFieldMappingChange('full_name', e.target.value)}
             />
             <TextField
               fullWidth
               margin="dense"
               label="Маппинг поля согласия"
-              value={formData.config.field_mapping?.marketing_consent || 'UF_CONSENT'}
-              onChange={(e) => handleConfigChange('field_mapping', { ...formData.config.field_mapping, marketing_consent: e.target.value })}
+              value={config.field_mapping?.marketing_consent || 'UF_CONSENT'}
+              onChange={(e) => handleFieldMappingChange('marketing_consent', e.target.value)}
             />
           </Box>
         );
+      }
       default:
         return null;
     }

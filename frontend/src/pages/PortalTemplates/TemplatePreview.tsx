@@ -26,7 +26,7 @@ export default function TemplatePreview({ templateId, venueId, htmlContent, file
         const context = {
           venue_name: 'Тестовая площадка',
           mac: 'AA:BB:CC:DD:EE:FF',
-          phone: '71234567890',
+          phone: '375291234567',  // исправлено на белорусский формат
           error: '',
           banner_url: files.images[0] || '/static/test_banner.jpg',
           code: '1234',
@@ -46,14 +46,14 @@ export default function TemplatePreview({ templateId, venueId, htmlContent, file
         const params = new URLSearchParams({
           venue_id: venueId.toString(),
           mac: 'AA:BB:CC:DD:EE:FF',
-          phone: '71234567890',
+          phone: '375291234567',  // исправлено
           banner_url: files.images[0] || '/static/test_banner.jpg',
         });
         const response = await api.get(`/portal/preview/${templateId}?${params}`, {
           responseType: 'text',
         });
         setPreviewHtml(response.data);
-      } catch (err) {
+      } catch {
         setError('Не удалось загрузить предпросмотр');
       } finally {
         setLoading(false);

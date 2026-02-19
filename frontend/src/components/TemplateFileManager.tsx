@@ -25,7 +25,7 @@ export default function TemplateFileManager({ templateId, files, fileType, onFil
         params: { file_path: filePath },
       });
       onFilesChanged(files.filter(f => f !== filePath));
-    } catch (err) {
+    } catch {
       setError('Ошибка при удалении файла');
     }
   };

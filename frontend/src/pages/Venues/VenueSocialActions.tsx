@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -11,14 +11,12 @@ import {
   TableRow,
   Paper,
   IconButton,
-  Chip,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   TextField,
   MenuItem,
-  Alert,
   CircularProgress,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
@@ -34,6 +32,7 @@ import {
 } from '@/api/socialActions';
 import { SocialAction, VenueSocialAction } from '@/types';
 import api from '@/api/axios';
+import { AxiosError } from 'axios';
 
 interface VenueSocialActionsProps {
   venueId: number;
@@ -65,7 +64,7 @@ const VenueSocialActions: React.FC<VenueSocialActionsProps> = ({ venueId }) => {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const { showSuccess, showError } = useSnackbar();
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [actionsRes, availableRes, tariffsRes] = await Promise.all([
@@ -77,15 +76,16 @@ const VenueSocialActions: React.FC<VenueSocialActionsProps> = ({ venueId }) => {
       setAvailableActions(availableRes.data.filter(a => a.is_active));
       setTariffs(tariffsRes.data);
     } catch (err) {
-      showError('Ошибка загрузки данных');
+      const errorMessage = err instanceof AxiosError ? err.message : 'Ошибка загрузки данных';
+      showError(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [venueId, showError]);
 
   useEffect(() => {
-    if (venueId) fetchData();
-  }, [venueId]);
+    fetchData();
+  }, [fetchData]);
 
   const handleOpenDialog = (item?: VenueSocialAction) => {
     if (item) {
@@ -133,12 +133,14 @@ const VenueSocialActions: React.FC<VenueSocialActionsProps> = ({ venueId }) => {
 
   const handleSave = async () => {
     if (!validate()) return;
+
+    const payload = {
+      action_id: formData.action_id as number,
+      reward_tariff_id: formData.reward_tariff_id || undefined,
+      reward_duration_hours: formData.reward_duration_hours,
+    };
+
     try {
-      const payload = {
-        action_id: formData.action_id as number, // на этом этапе уже число, если прошло валидацию
-        reward_tariff_id: formData.reward_tariff_id || null,
-        reward_duration_hours: formData.reward_duration_hours,
-      };
       if (editingId) {
         await updateVenueSocialAction(editingId, payload);
         showSuccess('Привязка обновлена');
@@ -148,8 +150,11 @@ const VenueSocialActions: React.FC<VenueSocialActionsProps> = ({ venueId }) => {
       }
       fetchData();
       handleCloseDialog();
-    } catch (err: any) {
-      showError(err.response?.data?.detail || 'Ошибка сохранения');
+    } catch (err) {
+      const errorMessage = err instanceof AxiosError
+        ? err.response?.data?.detail || err.message
+        : 'Ошибка сохранения';
+      showError(errorMessage);
     }
   };
 
@@ -160,7 +165,8 @@ const VenueSocialActions: React.FC<VenueSocialActionsProps> = ({ venueId }) => {
       showSuccess('Привязка удалена');
       fetchData();
     } catch (err) {
-      showError('Ошибка удаления');
+      const errorMessage = err instanceof AxiosError ? err.message : 'Ошибка удаления';
+      showError(errorMessage);
     }
   };
 

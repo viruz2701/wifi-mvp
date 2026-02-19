@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+// src/pages/SocialActions/SocialActionForm.tsx
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -14,7 +15,8 @@ import {
   Typography,
 } from '@mui/material';
 import api from '@/api/axios';
-import { SocialAction, SocialActionFormData, SocialActionType, SocialNetwork } from './types';
+import { AxiosError } from 'axios';
+import { SocialAction, SocialActionFormData, SocialActionType, SocialNetwork, VkConfig, TelegramConfig, ViberConfig } from './types';
 
 interface SocialActionFormProps {
   open: boolean;
@@ -76,7 +78,7 @@ const SocialActionForm: React.FC<SocialActionFormProps> = ({
     }
   };
 
-  const handleConfigChange = (field: string, value: any) => {
+  const handleConfigChange = (field: string, value: string) => {
     setFormData((prev) => ({
       ...prev,
       config: { ...prev.config, [field]: value },
@@ -97,23 +99,26 @@ const SocialActionForm: React.FC<SocialActionFormProps> = ({
       errors.name = 'Название не может быть пустым';
     }
 
-    // Проверка config в зависимости от сети
+    const config = formData.config;
     if (formData.network === 'vk') {
-      if (!formData.config.group_id) {
+      const vkConfig = config as Partial<VkConfig>;
+      if (!vkConfig.group_id) {
         errors.group_id = 'ID группы обязателен';
       }
-      if (!formData.config.access_token) {
+      if (!vkConfig.access_token) {
         errors.access_token = 'Access token обязателен';
       }
     } else if (formData.network === 'telegram') {
-      if (!formData.config.channel_id) {
+      const tgConfig = config as Partial<TelegramConfig>;
+      if (!tgConfig.channel_id) {
         errors.channel_id = 'ID канала обязателен';
       }
-      if (!formData.config.bot_token) {
+      if (!tgConfig.bot_token) {
         errors.bot_token = 'Bot token обязателен';
       }
     } else if (formData.network === 'viber') {
-      if (!formData.config.bot_token) {
+      const viberConfig = config as Partial<ViberConfig>;
+      if (!viberConfig.bot_token) {
         errors.bot_token = 'Bot token обязателен';
       }
     }
@@ -143,16 +148,24 @@ const SocialActionForm: React.FC<SocialActionFormProps> = ({
       }
       onSaved();
       onClose();
-    } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || 'Ошибка сохранения');
+    } catch (err) {
+      if (err instanceof AxiosError) {
+        setError(err.response?.data?.detail || err.message || 'Ошибка сохранения');
+      } else if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Ошибка сохранения');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const renderConfigFields = () => {
+    const config = formData.config;
     switch (formData.network) {
-      case 'vk':
+      case 'vk': {
+        const vkConfig = config as Partial<VkConfig>;
         return (
           <Box sx={{ mt: 2 }}>
             <Typography variant="subtitle2" gutterBottom>Настройки VK</Typography>
@@ -160,7 +173,7 @@ const SocialActionForm: React.FC<SocialActionFormProps> = ({
               fullWidth
               margin="dense"
               label="ID группы"
-              value={formData.config.group_id || ''}
+              value={vkConfig.group_id || ''}
               onChange={(e) => handleConfigChange('group_id', e.target.value)}
               required
               error={!!validationErrors.group_id}
@@ -170,7 +183,7 @@ const SocialActionForm: React.FC<SocialActionFormProps> = ({
               fullWidth
               margin="dense"
               label="Access token"
-              value={formData.config.access_token || ''}
+              value={vkConfig.access_token || ''}
               onChange={(e) => handleConfigChange('access_token', e.target.value)}
               required
               error={!!validationErrors.access_token}
@@ -178,7 +191,9 @@ const SocialActionForm: React.FC<SocialActionFormProps> = ({
             />
           </Box>
         );
-      case 'telegram':
+      }
+      case 'telegram': {
+        const tgConfig = config as Partial<TelegramConfig>;
         return (
           <Box sx={{ mt: 2 }}>
             <Typography variant="subtitle2" gutterBottom>Настройки Telegram</Typography>
@@ -186,7 +201,7 @@ const SocialActionForm: React.FC<SocialActionFormProps> = ({
               fullWidth
               margin="dense"
               label="ID канала (с @ или числовой)"
-              value={formData.config.channel_id || ''}
+              value={tgConfig.channel_id || ''}
               onChange={(e) => handleConfigChange('channel_id', e.target.value)}
               required
               error={!!validationErrors.channel_id}
@@ -196,7 +211,7 @@ const SocialActionForm: React.FC<SocialActionFormProps> = ({
               fullWidth
               margin="dense"
               label="Bot token"
-              value={formData.config.bot_token || ''}
+              value={tgConfig.bot_token || ''}
               onChange={(e) => handleConfigChange('bot_token', e.target.value)}
               required
               error={!!validationErrors.bot_token}
@@ -204,7 +219,9 @@ const SocialActionForm: React.FC<SocialActionFormProps> = ({
             />
           </Box>
         );
-      case 'viber':
+      }
+      case 'viber': {
+        const viberConfig = config as Partial<ViberConfig>;
         return (
           <Box sx={{ mt: 2 }}>
             <Typography variant="subtitle2" gutterBottom>Настройки Viber</Typography>
@@ -212,7 +229,7 @@ const SocialActionForm: React.FC<SocialActionFormProps> = ({
               fullWidth
               margin="dense"
               label="Bot token"
-              value={formData.config.bot_token || ''}
+              value={viberConfig.bot_token || ''}
               onChange={(e) => handleConfigChange('bot_token', e.target.value)}
               required
               error={!!validationErrors.bot_token}
@@ -222,11 +239,12 @@ const SocialActionForm: React.FC<SocialActionFormProps> = ({
               fullWidth
               margin="dense"
               label="Название бота (опционально)"
-              value={formData.config.bot_name || ''}
+              value={viberConfig.bot_name || ''}
               onChange={(e) => handleConfigChange('bot_name', e.target.value)}
             />
           </Box>
         );
+      }
       default:
         return null;
     }

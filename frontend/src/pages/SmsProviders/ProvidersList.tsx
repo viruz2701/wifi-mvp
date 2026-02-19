@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   Paper,
   Table,
@@ -21,6 +21,7 @@ import AddIcon from '@mui/icons-material/Add';
 import { SmsProvider } from './types';
 import api from '@/api/axios';
 import { useSnackbar } from '@/hooks/useSnackbar';
+import { AxiosError } from 'axios';
 
 interface ProvidersListProps {
   onEdit: (provider: SmsProvider) => void;
@@ -33,22 +34,24 @@ const ProvidersList: React.FC<ProvidersListProps> = ({ onEdit, onAdd }) => {
   const [error, setError] = useState('');
   const { showSuccess, showError } = useSnackbar();
 
-  const fetchProviders = async () => {
+  const fetchProviders = useCallback(async () => {
     setLoading(true);
     try {
       const response = await api.get('/sms-providers');
       setProviders(response.data);
-    } catch (err: any) {
-      setError(err.message || 'Ошибка загрузки');
-      showError(err.message || 'Ошибка загрузки');
+      setError('');
+    } catch (err) {
+      const errorMessage = err instanceof AxiosError ? err.message : 'Ошибка загрузки';
+      setError(errorMessage);
+      showError(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [showError]);
 
   useEffect(() => {
     fetchProviders();
-  }, []);
+  }, [fetchProviders]);
 
   const handleDelete = async (id: number) => {
     if (!window.confirm('Удалить провайдера?')) return;
@@ -56,8 +59,9 @@ const ProvidersList: React.FC<ProvidersListProps> = ({ onEdit, onAdd }) => {
       await api.delete(`/sms-providers/${id}`);
       showSuccess('Провайдер удалён');
       fetchProviders();
-    } catch (err: any) {
-      showError(err.message || 'Ошибка удаления');
+    } catch (err) {
+      const errorMessage = err instanceof AxiosError ? err.message : 'Ошибка удаления';
+      showError(errorMessage);
     }
   };
 
@@ -66,8 +70,9 @@ const ProvidersList: React.FC<ProvidersListProps> = ({ onEdit, onAdd }) => {
       await api.post(`/sms-providers/${id}/set-active`);
       showSuccess('Провайдер активирован');
       fetchProviders();
-    } catch (err: any) {
-      showError(err.message || 'Ошибка активации');
+    } catch (err) {
+      const errorMessage = err instanceof AxiosError ? err.message : 'Ошибка активации';
+      showError(errorMessage);
     }
   };
 

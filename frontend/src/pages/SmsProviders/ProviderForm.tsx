@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+// src/pages/SmsProviders/ProviderForm.tsx
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -13,15 +14,16 @@ import {
   Box,
   Typography,
 } from '@mui/material';
-import api from '@/api/axios'; // Импортируем настроенный axios
-import { SmsProvider, SmsProviderType, SmsProviderFormData } from './types';
+import api from '@/api/axios';
+import { AxiosError } from 'axios';
+import { SmsProvider, SmsProviderType, SmsProviderFormData, RocketSmsConfig, CallPasswordConfig, WebSmsConfig } from './types';
 
 interface ProviderFormProps {
   open: boolean;
   onClose: () => void;
   onSaved: () => void;
   provider?: SmsProvider | null;
-  providerTypes: string[]; // список типов с бэкенда
+  providerTypes: string[];
 }
 
 const ProviderForm: React.FC<ProviderFormProps> = ({
@@ -66,7 +68,6 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // очищаем ошибку для этого поля при вводе
     if (validationErrors[name]) {
       setValidationErrors((prev) => ({ ...prev, [name]: '' }));
     }
@@ -74,7 +75,6 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    // преобразуем в число, если не пусто
     const numValue = value === '' ? 0 : parseInt(value, 10);
     setFormData((prev) => ({ ...prev, [name]: numValue }));
     if (validationErrors[name]) {
@@ -82,12 +82,11 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
     }
   };
 
-  const handleConfigChange = (field: string, value: any) => {
+  const handleConfigChange = (field: string, value: string | number) => {
     setFormData((prev) => ({
       ...prev,
       config: { ...prev.config, [field]: value },
     }));
-    // очищаем ошибку для этого поля (если есть)
     if (validationErrors[field]) {
       setValidationErrors((prev) => ({ ...prev, [field]: '' }));
     }
@@ -102,7 +101,7 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
     setFormData({
       ...formData,
       type: newType,
-      config: {}, // сбрасываем конфиг при смене типа
+      config: {},
     });
     setValidationErrors({});
   };
@@ -114,29 +113,32 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
       errors.name = 'Название не может быть пустым';
     }
 
-    // Проверка config в зависимости от типа
     if (Object.keys(formData.config).length === 0) {
       errors.config = 'Конфигурация не может быть пустой';
     } else {
+      const config = formData.config;
       if (formData.type === 'rocketsms') {
-        if (!formData.config.username) {
+        const rocketConfig = config as Partial<RocketSmsConfig>;
+        if (!rocketConfig.username) {
           errors.username = 'Логин обязателен';
         }
-        if (!formData.config.password_md5) {
+        if (!rocketConfig.password_md5) {
           errors.password_md5 = 'MD5-пароль обязателен';
         }
       } else if (formData.type === 'callpassword') {
-        if (!formData.config.api_key) {
+        const callConfig = config as Partial<CallPasswordConfig>;
+        if (!callConfig.api_key) {
           errors.api_key = 'API ключ обязателен';
         }
-        if (!formData.config.api_secret) {
+        if (!callConfig.api_secret) {
           errors.api_secret = 'API секрет обязателен';
         }
       } else if (formData.type === 'websms') {
-        if (!formData.config.user) {
+        const webConfig = config as Partial<WebSmsConfig>;
+        if (!webConfig.user) {
           errors.user = 'Логин (user) обязателен';
         }
-        if (!formData.config.apikey) {
+        if (!webConfig.apikey) {
           errors.apikey = 'API ключ (apikey) обязателен';
         }
       }
@@ -147,27 +149,25 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
   };
 
   const handleSubmit = async () => {
-    if (!validate()) {
-      return;
-    }
+    if (!validate()) return;
 
     setLoading(true);
     setError('');
     try {
-      const url = provider 
-        ? `/sms-providers/${provider.id}`
-        : '/sms-providers';
-      
+      const url = provider ? `/sms-providers/${provider.id}` : '/sms-providers';
       if (provider) {
         await api.put(url, formData);
       } else {
         await api.post(url, formData);
       }
-
       onSaved();
       onClose();
-    } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || 'Ошибка сохранения');
+    } catch (err) {
+      if (err instanceof AxiosError) {
+        setError(err.response?.data?.detail || err.message || 'Ошибка сохранения');
+      } else {
+        setError('Ошибка сохранения');
+      }
     } finally {
       setLoading(false);
     }
@@ -175,7 +175,8 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
 
   const renderConfigFields = () => {
     switch (formData.type) {
-      case 'rocketsms':
+      case 'rocketsms': {
+        const config = formData.config as Partial<RocketSmsConfig>;
         return (
           <Box sx={{ mt: 2 }}>
             <Typography variant="subtitle2" gutterBottom>Настройки RocketSMS</Typography>
@@ -183,7 +184,7 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
               fullWidth
               margin="dense"
               label="Логин"
-              value={formData.config.username || ''}
+              value={config.username || ''}
               onChange={(e) => handleConfigChange('username', e.target.value)}
               required
               error={!!validationErrors.username}
@@ -193,7 +194,7 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
               fullWidth
               margin="dense"
               label="MD5 пароль"
-              value={formData.config.password_md5 || ''}
+              value={config.password_md5 || ''}
               onChange={(e) => handleConfigChange('password_md5', e.target.value)}
               required
               error={!!validationErrors.password_md5}
@@ -203,13 +204,15 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
               fullWidth
               margin="dense"
               label="Отправитель (sender)"
-              value={formData.config.sender || ''}
+              value={config.sender || ''}
               onChange={(e) => handleConfigChange('sender', e.target.value)}
               helperText="Альфа-имя, если не указано - используется имя по умолчанию"
             />
           </Box>
         );
-      case 'callpassword':
+      }
+      case 'callpassword': {
+        const config = formData.config as Partial<CallPasswordConfig>;
         return (
           <Box sx={{ mt: 2 }}>
             <Typography variant="subtitle2" gutterBottom>Настройки CallPassword</Typography>
@@ -217,7 +220,7 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
               fullWidth
               margin="dense"
               label="API ключ"
-              value={formData.config.api_key || ''}
+              value={config.api_key || ''}
               onChange={(e) => handleConfigChange('api_key', e.target.value)}
               required
               error={!!validationErrors.api_key}
@@ -227,7 +230,7 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
               fullWidth
               margin="dense"
               label="API секрет"
-              value={formData.config.api_secret || ''}
+              value={config.api_secret || ''}
               onChange={(e) => handleConfigChange('api_secret', e.target.value)}
               required
               error={!!validationErrors.api_secret}
@@ -237,13 +240,15 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
               fullWidth
               margin="dense"
               label="Таймаут (сек)"
-              value={formData.config.timeout || 60}
-              onChange={(e) => handleConfigChange('timeout', e.target.value)}
+              value={config.timeout ?? 60}
+              onChange={(e) => handleConfigChange('timeout', Number(e.target.value))}
               type="number"
             />
           </Box>
         );
-      case 'websms':
+      }
+      case 'websms': {
+        const config = formData.config as Partial<WebSmsConfig>;
         return (
           <Box sx={{ mt: 2 }}>
             <Typography variant="subtitle2" gutterBottom>Настройки WebSMS.by</Typography>
@@ -251,7 +256,7 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
               fullWidth
               margin="dense"
               label="Логин (user)"
-              value={formData.config.user || ''}
+              value={config.user || ''}
               onChange={(e) => handleConfigChange('user', e.target.value)}
               required
               error={!!validationErrors.user}
@@ -261,7 +266,7 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
               fullWidth
               margin="dense"
               label="API ключ (apikey)"
-              value={formData.config.apikey || ''}
+              value={config.apikey || ''}
               onChange={(e) => handleConfigChange('apikey', e.target.value)}
               required
               error={!!validationErrors.apikey}
@@ -271,12 +276,13 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
               fullWidth
               margin="dense"
               label="Отправитель (sender, опционально)"
-              value={formData.config.sender || ''}
+              value={config.sender || ''}
               onChange={(e) => handleConfigChange('sender', e.target.value)}
               helperText="Альфа-имя отправителя"
             />
           </Box>
         );
+      }
       default:
         return null;
     }
@@ -338,22 +344,13 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
         )}
 
         <FormControlLabel
-          control={
-            <Checkbox
-              checked={formData.is_active}
-              onChange={handleCheckbox}
-            />
-          }
+          control={<Checkbox checked={formData.is_active} onChange={handleCheckbox} />}
           label="Активен"
         />
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Отмена</Button>
-        <Button 
-          onClick={handleSubmit} 
-          variant="contained" 
-          disabled={loading}
-        >
+        <Button onClick={handleSubmit} variant="contained" disabled={loading}>
           {loading ? 'Сохранение...' : 'Сохранить'}
         </Button>
       </DialogActions>

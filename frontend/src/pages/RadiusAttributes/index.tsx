@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Container } from '@mui/material';
 import RadiusAttributesList from './RadiusAttributesList';
 import RadiusAttributeForm from './RadiusAttributeForm';
 import { RadiusAttribute } from './types';
 
-const RadiusAttributesPage: React.FC = () => {
+const RadiusAttributesPage = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [editingAttribute, setEditingAttribute] = useState<RadiusAttribute | null>(null);
 
@@ -19,7 +19,7 @@ const RadiusAttributesPage: React.FC = () => {
   };
 
   const handleSaved = () => {
-    window.location.reload(); // простой способ обновить список
+    window.location.reload();
   };
 
   return (

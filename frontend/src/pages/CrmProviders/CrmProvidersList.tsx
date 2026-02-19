@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   Paper,
   Table,
@@ -33,22 +33,24 @@ const CrmProvidersList: React.FC<CrmProvidersListProps> = ({ onEdit, onAdd }) =>
   const [error, setError] = useState('');
   const { showSuccess, showError } = useSnackbar();
 
-  const fetchProviders = async () => {
+  const fetchProviders = useCallback(async () => {
     setLoading(true);
     try {
       const response = await api.get('/crm/providers');
       setProviders(response.data);
-    } catch (err: any) {
-      setError(err.message || 'Ошибка загрузки');
-      showError(err.message || 'Ошибка загрузки');
+      setError('');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Ошибка загрузки';
+      setError(errorMessage);
+      showError(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [showError]);
 
   useEffect(() => {
     fetchProviders();
-  }, []);
+  }, [fetchProviders]);
 
   const handleDelete = async (id: number) => {
     if (!window.confirm('Удалить CRM-провайдера?')) return;
@@ -56,8 +58,9 @@ const CrmProvidersList: React.FC<CrmProvidersListProps> = ({ onEdit, onAdd }) =>
       await api.delete(`/crm/providers/${id}`);
       showSuccess('Провайдер удалён');
       fetchProviders();
-    } catch (err: any) {
-      showError(err.message || 'Ошибка удаления');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Ошибка удаления';
+      showError(errorMessage);
     }
   };
 

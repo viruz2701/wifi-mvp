@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+// src/pages/Banners/BannersList.tsx
+import { useState, useEffect } from 'react'; // удалён useCallback
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import {
   Button,
@@ -46,23 +47,22 @@ export default function BannersList({ onEdit, onAdd }: BannersListProps) {
   }, [user]);
 
   useEffect(() => {
-    if (selectedVenue !== '') {
-      fetchBanners();
-    }
-  }, [selectedVenue]);
+    const fetchBanners = async () => {
+      if (selectedVenue === '') return;
+      setLoading(true);
+      try {
+        const venueId = selectedVenue === 0 ? undefined : selectedVenue;
+        const response = await getBanners(venueId);
+        setBanners(response.data);
+      } catch {
+        showError('Не удалось загрузить баннеры');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const fetchBanners = async () => {
-    setLoading(true);
-    try {
-      const venueId = selectedVenue === 0 ? undefined : (selectedVenue as number);
-      const response = await getBanners(venueId);
-      setBanners(response.data);
-    } catch (err) {
-      showError('Не удалось загрузить баннеры');
-    } finally {
-      setLoading(false);
-    }
-  };
+    fetchBanners();
+  }, [selectedVenue, showError]);
 
   const handleDeleteClick = (id: number) => setDeleteId(id);
 
@@ -71,8 +71,13 @@ export default function BannersList({ onEdit, onAdd }: BannersListProps) {
     try {
       await deleteBanner(deleteId);
       showSuccess('Баннер удалён');
-      fetchBanners();
-    } catch (err) {
+      // Обновляем список после удаления
+      if (selectedVenue !== '') {
+        const venueId = selectedVenue === 0 ? undefined : selectedVenue;
+        const response = await getBanners(venueId);
+        setBanners(response.data);
+      }
+    } catch {
       showError('Ошибка при удалении');
     } finally {
       setDeleteId(null);

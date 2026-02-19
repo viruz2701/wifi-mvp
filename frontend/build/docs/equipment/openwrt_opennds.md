@@ -200,3 +200,91 @@ cat /tmp/opennds/ndsctl.sock | ndsctl status
 bash
 ndsctl logout <mac-address>
 Эти инструкции покрывают основные сценарии. При возникновении сложностей обращайтесь к логам OpenNDS (logread -e opennds) и логам платформы.
+
+
+ Настройка OpenWrt с OpenNDS и внешним FAS
+OpenNDS (Open Network Demarcation Service) – современная замена CoovaChilli, поддерживающая внешние FAS-серверы. В нашем случае FAS – это сама платформа (эндпоинт /api/v1/portal/opennds).
+
+2.1. Установка OpenNDS
+Подключитесь к OpenWrt по SSH и выполните:
+
+bash
+opkg update
+opkg install opennds
+2.2. Настройка конфигурации OpenNDS
+Отредактируйте файл /etc/config/opennds:
+
+bash
+vi /etc/config/opennds
+Приведите его к следующему виду (замените your-server.com на домен или IP вашего сервера):
+
+text
+config opennds
+        option enabled 1
+        option fashost 'your-server.com'
+        option fasport 443
+        option faspath '/api/v1/portal/opennds'
+        option dhcpstart 100
+        option dhcpend 200
+        option network 'lan'
+Пояснения:
+
+fashost – адрес вашего сервера (можно использовать IP, но лучше домен с HTTPS).
+
+fasport – порт (80 для HTTP, 443 для HTTPS). Рекомендуется использовать HTTPS, если настроен SSL.
+
+faspath – путь к эндпоинту FAS на бэкенде (должен совпадать с маршрутом в opennds.py).
+
+network – имя интерфейса, на котором будет работать OpenNDS (обычно lan для гостевой сети).
+
+Если гостевая сеть находится на отдельном интерфейсе (например, guest), укажите его.
+
+2.3. Перезапуск сервиса
+bash
+/etc/init.d/opennds restart
+2.4. Настройка WireGuard для управления (опционально)
+Если устройство не имеет публичного IP, можно использовать WireGuard аналогично MikroTik.
+
+Установка WireGuard:
+
+bash
+opkg update
+opkg install wireguard-tools luci-proto-wireguard
+Создание конфигурации:
+
+Создайте файл /etc/wireguard/wg0.conf:
+
+text
+[Interface]
+PrivateKey = ВАШ_ПРИВАТНЫЙ_КЛЮЧ
+Address = 10.0.0.3/24
+DNS = 8.8.8.8
+
+[Peer]
+PublicKey = ПУБЛИЧНЫЙ_КЛЮЧ_СЕРВЕРА
+Endpoint = ваш-сервер.com:51820
+AllowedIPs = 10.0.0.0/24
+PersistentKeepalive = 25
+Затем активируйте интерфейс:
+
+bash
+wg-quick up wg0
+/etc/init.d/network restart
+Для автоматического запуска при загрузке добавьте в /etc/rc.local:
+
+bash
+wg-quick up wg0
+2.5. Проверка работы OpenNDS
+Подключитесь к гостевой Wi-Fi сети.
+
+Откройте браузер – вы должны быть перенаправлены на страницу авторизации платформы (URL вида https://ваш-сервер/api/v1/portal/opennds?clientip=...&gatewayname=...&tok=...).
+
+Введите номер телефона, получите SMS, введите код – доступ должен открыться.
+
+Если страница не загружается, проверьте:
+
+Доступность сервера из гостевой сети (ping, DNS).
+
+Правильность параметров fashost и faspath.
+
+Логи OpenNDS: logread -e opennds.

@@ -11,7 +11,7 @@ interface PreviewDialogProps {
 
 export default function PreviewDialog({ open, onClose, templateId, venueId }: PreviewDialogProps) {
   const [mac, setMac] = useState('AA:BB:CC:DD:EE:FF');
-  const [phone, setPhone] = useState('71234567890');
+  const [phone, setPhone] = useState('375291234567'); // исправлено
   const [errorMsg, setErrorMsg] = useState('');
   const [bannerUrl, setBannerUrl] = useState('/static/test_banner.jpg');
   const [previewHtml, setPreviewHtml] = useState('');
@@ -22,7 +22,7 @@ export default function PreviewDialog({ open, onClose, templateId, venueId }: Pr
         params: { venue_id: venueId, mac, phone, error: errorMsg, banner_url: bannerUrl },
       });
       setPreviewHtml(response.data);
-    } catch (err) {
+    } catch {
       alert('Ошибка загрузки предпросмотра');
     }
   };

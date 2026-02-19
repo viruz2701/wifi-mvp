@@ -11,6 +11,8 @@ import {
 } from '@mui/material';
 import { getUserProfile, updateUserProfile } from '@/api/userProfiles';
 import { userProfileSchema, UserProfileFormValues } from '@/validation/userProfileSchema';
+import * as yup from 'yup';
+import { AxiosError } from 'axios';
 
 interface ProfileEditDialogProps {
   open: boolean;
@@ -34,16 +36,20 @@ export default function ProfileEditDialog({ open, onClose, onSaved, profileId, i
       if (initialData) {
         setForm(initialData);
       } else {
-        getUserProfile(profileId).then(res => {
-          setForm({ is_blocked: res.data.is_blocked, is_vip: res.data.is_vip });
-        }).catch(() => setApiError('Ошибка загрузки данных'));
+        getUserProfile(profileId)
+          .then(res => {
+            setForm({ is_blocked: res.data.is_blocked, is_vip: res.data.is_vip });
+          })
+          .catch(() => setApiError('Ошибка загрузки данных'));
       }
     }
   }, [open, profileId, initialData]);
 
   const handleCheckbox = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.checked }));
-    if (errors[e.target.name]) setErrors((prev) => ({ ...prev, [e.target.name]: undefined }));
+    if (errors[e.target.name]) {
+      setErrors((prev) => ({ ...prev, [e.target.name]: undefined }));
+    }
   };
 
   const handleSubmit = async () => {
@@ -56,15 +62,17 @@ export default function ProfileEditDialog({ open, onClose, onSaved, profileId, i
       await updateUserProfile(profileId, form);
       onSaved();
       onClose();
-    } catch (err: any) {
-      if (err.name === 'ValidationError') {
+    } catch (err) {
+      if (err instanceof yup.ValidationError) {
         const validationErrors: Record<string, string | undefined> = {};
-        err.inner.forEach((e: any) => {
+        err.inner.forEach((e) => {
           if (e.path) validationErrors[e.path] = e.message;
         });
         setErrors(validationErrors);
-      } else {
+      } else if (err instanceof AxiosError) {
         setApiError(err.response?.data?.detail || 'Ошибка сохранения');
+      } else {
+        setApiError('Ошибка сохранения');
       }
     } finally {
       setLoading(false);

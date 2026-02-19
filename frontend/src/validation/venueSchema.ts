@@ -12,6 +12,11 @@ export const venueSchema = yup.object({
   contact_email: yup.string().nullable().email('Некорректный email'),
   is_active: yup.boolean(),
   ssl_enabled: yup.boolean(),
+  crm_enabled: yup.boolean(),
+  show_email_field: yup.boolean(),
+  show_name_field: yup.boolean(),
+  show_marketing_consent: yup.boolean(),
+  allow_nas_connection_info: yup.boolean(),
 });
 
 export type VenueFormValues = yup.InferType<typeof venueSchema>;

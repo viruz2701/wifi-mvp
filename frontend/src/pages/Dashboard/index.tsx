@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box, Card, CardContent, Typography,
   FormControl, InputLabel, Select, MenuItem,
@@ -16,21 +16,27 @@ interface Metrics {
   sms_confirmed: number;
 }
 
+interface ChartDataItem {
+  day: string;
+  sessions: number;
+  unique_users: number;
+}
+
 export default function Dashboard() {
   const [period, setPeriod] = useState<'today' | 'week' | 'month'>('today');
   const [metrics, setMetrics] = useState<Metrics | null>(null);
-  const [chartData, setChartData] = useState<any[]>([]);
+  const [chartData, setChartData] = useState<ChartDataItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const fetchMetrics = async () => {
+  const fetchMetrics = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const params: any = { period };
+      const params: Record<string, unknown> = { period };
       const [metricsRes, chartRes] = await Promise.all([
-        api.get('/reports/dashboard-metrics', { params }),
-        api.get('/reports/activity', {
+        api.get<Metrics>('/reports/dashboard-metrics', { params }),
+        api.get<ChartDataItem[]>('/reports/activity', {
           params: {
             from_date: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
             to_date: format(new Date(), 'yyyy-MM-dd'),
@@ -39,16 +45,16 @@ export default function Dashboard() {
       ]);
       setMetrics(metricsRes.data);
       setChartData(chartRes.data);
-    } catch (err) {
+    } catch {
       setError('Ошибка загрузки данных');
     } finally {
       setLoading(false);
     }
-  };
+  }, [period]);
 
   useEffect(() => {
     fetchMetrics();
-  }, [period]);
+  }, [fetchMetrics]);
 
   if (loading) return <CircularProgress />;
   if (error) return <Alert severity="error">{error}</Alert>;
@@ -58,7 +64,11 @@ export default function Dashboard() {
       <Typography variant="h4" gutterBottom>Дашборд</Typography>
       <FormControl sx={{ mb: 2, minWidth: 200 }}>
         <InputLabel>Период</InputLabel>
-        <Select value={period} onChange={(e) => setPeriod(e.target.value as any)} label="Период">
+        <Select
+          value={period}
+          onChange={(e) => setPeriod(e.target.value as 'today' | 'week' | 'month')}
+          label="Период"
+        >
           <MenuItem value="today">Сегодня</MenuItem>
           <MenuItem value="week">Неделя</MenuItem>
           <MenuItem value="month">Месяц</MenuItem>

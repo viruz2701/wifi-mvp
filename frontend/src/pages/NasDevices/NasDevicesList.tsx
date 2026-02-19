@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { Button, IconButton, Stack, Typography, Chip, Tooltip } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
@@ -6,12 +6,13 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import InfoIcon from '@mui/icons-material/Info';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
 import api from '@/api/axios';
 import { NASDevice } from '@/types';
 import { useSnackbar } from '@/hooks/useSnackbar';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { LoadingScreen } from '@/components/LoadingScreen';
-import NASConnectionInfo from './NASConnectionInfo'; // компонент из Этапа 4
+import NASConnectionInfo from './NASConnectionInfo';
 
 interface NasDevicesListProps {
   onEdit: (id: number) => void;
@@ -26,21 +27,21 @@ export default function NasDevicesList({ onEdit, onAdd }: NasDevicesListProps) {
   const [selectedNasId, setSelectedNasId] = useState<number | null>(null);
   const { showSuccess, showError } = useSnackbar();
 
-  useEffect(() => {
-    fetchDevices();
-  }, []);
-
-  const fetchDevices = async () => {
+  const fetchDevices = useCallback(async () => {
     setLoading(true);
     try {
       const response = await api.get('/nas-devices');
       setDevices(response.data);
-    } catch (err) {
+    } catch {
       showError('Не удалось загрузить список устройств');
     } finally {
       setLoading(false);
     }
-  };
+  }, [showError]);
+
+  useEffect(() => {
+    fetchDevices();
+  }, [fetchDevices]);
 
   const handleDeleteClick = (id: number) => setDeleteId(id);
 
@@ -50,7 +51,7 @@ export default function NasDevicesList({ onEdit, onAdd }: NasDevicesListProps) {
       await api.delete(`/nas-devices/${deleteId}`);
       showSuccess('Устройство удалено');
       fetchDevices();
-    } catch (err) {
+    } catch {
       showError('Ошибка при удалении');
     } finally {
       setDeleteId(null);
@@ -132,7 +133,19 @@ export default function NasDevicesList({ onEdit, onAdd }: NasDevicesListProps) {
     <>
       <div style={{ height: 600, width: '100%' }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-          <Typography variant="h5">NAS-устройства</Typography>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Typography variant="h5">NAS-устройства</Typography>
+            <Tooltip title="Открыть документацию по настройке">
+              <IconButton
+                component="a"
+                href="/docs/admin_guide.md"
+                target="_blank"
+                size="small"
+              >
+                <MenuBookIcon />
+              </IconButton>
+            </Tooltip>
+          </Stack>
           <Button variant="contained" startIcon={<AddIcon />} onClick={onAdd}>
             Добавить
           </Button>

@@ -14,6 +14,7 @@ import {
   Box,
 } from '@mui/material';
 import api from '@/api/axios';
+import { AxiosError } from 'axios';
 import { venueSchema, VenueFormValues } from '@/validation/venueSchema';
 import VenueSocialActions from './VenueSocialActions';
 
@@ -39,7 +40,7 @@ export default function VenueForm({ open, onClose, onSaved, venueId }: VenueForm
     show_email_field: false,
     show_name_field: false,
     show_marketing_consent: false,
-    allow_nas_connection_info: false, // добавлено новое поле
+    allow_nas_connection_info: false,
   });
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [loading, setLoading] = useState(false);
@@ -88,17 +89,20 @@ export default function VenueForm({ open, onClose, onSaved, venueId }: VenueForm
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
+    // Для поля domain пустая строка должна превращаться в null,
+    // для остальных строковых полей оставляем пустую строку (она допустима)
+    const newValue = type === 'checkbox' ? checked : (name === 'domain' && value === '' ? null : value);
     setForm((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value === '' ? null : value,
+      [name]: newValue,
     }));
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
   };
 
-  const cleanForm = (data: VenueFormValues) => {
-    const result: any = {};
+  const cleanForm = (data: VenueFormValues): Record<string, unknown> => {
+    const result: Record<string, unknown> = {};
     for (const key in data) {
       const value = data[key as keyof VenueFormValues];
       // Отправляем все поля, включая null (для domain)
@@ -121,15 +125,17 @@ export default function VenueForm({ open, onClose, onSaved, venueId }: VenueForm
       }
       onSaved();
       onClose();
-    } catch (err: any) {
-      if (err.name === 'ValidationError') {
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'name' in err && err.name === 'ValidationError' && 'inner' in err) {
         const validationErrors: Record<string, string | undefined> = {};
-        err.inner.forEach((e: any) => {
+        (err as { inner: { path?: string; message: string }[] }).inner.forEach((e) => {
           if (e.path) validationErrors[e.path] = e.message;
         });
         setErrors(validationErrors);
-      } else {
+      } else if (err instanceof AxiosError) {
         setApiError(err.response?.data?.detail || 'Ошибка сохранения');
+      } else {
+        setApiError('Ошибка сохранения');
       }
     } finally {
       setLoading(false);

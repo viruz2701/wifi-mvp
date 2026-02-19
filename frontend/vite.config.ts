@@ -11,7 +11,11 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    historyApiFallback: true, // добавлено
+    historyApiFallback: true,
+    fs: {
+      // Разрешаем доступ к корневой папке проекта (где лежит docs)
+      allow: ['..'],
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:8000',

@@ -60,12 +60,25 @@ export default function TemplateFileManager({
         params: { file_path: filePath },
       });
 
-      if (type === 'css') setCssFiles(cssFiles.filter(f => f !== filePath));
-      if (type === 'js') setJsFiles(jsFiles.filter(f => f !== filePath));
-      if (type === 'image') setImages(images.filter(f => f !== filePath));
+      let newCss = cssFiles;
+      let newJs = jsFiles;
+      let newImages = images;
 
-      onUpdate(cssFiles, jsFiles, images);
-    } catch (err) {
+      if (type === 'css') {
+        newCss = cssFiles.filter(f => f !== filePath);
+        setCssFiles(newCss);
+      }
+      if (type === 'js') {
+        newJs = jsFiles.filter(f => f !== filePath);
+        setJsFiles(newJs);
+      }
+      if (type === 'image') {
+        newImages = images.filter(f => f !== filePath);
+        setImages(newImages);
+      }
+
+      onUpdate(newCss, newJs, newImages);
+    } catch {
       alert('Ошибка удаления файла');
     }
   };

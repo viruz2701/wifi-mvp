@@ -16,6 +16,7 @@ import {
 import api from '@/api/axios';
 import { portalTemplateSchema, PortalTemplateFormValues } from '@/validation/portalTemplateSchema';
 import TemplateFileManager from '@/components/TemplateFileManager/TemplateFileManager';
+import { AxiosError } from 'axios';
 
 interface TemplateFormProps {
   open: boolean;
@@ -85,15 +86,17 @@ export default function TemplateForm({ open, onClose, onSaved, templateId }: Tem
       }
       onSaved();
       onClose();
-    } catch (err: any) {
-      if (err.name === 'ValidationError') {
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'name' in err && err.name === 'ValidationError' && 'inner' in err) {
         const validationErrors: Record<string, string | undefined> = {};
-        err.inner.forEach((e: any) => {
+        (err as { inner: { path?: string; message: string }[] }).inner.forEach((e) => {
           if (e.path) validationErrors[e.path] = e.message;
         });
         setErrors(validationErrors);
-      } else {
+      } else if (err instanceof AxiosError) {
         setApiError(err.response?.data?.detail || 'Ошибка сохранения');
+      } else {
+        setApiError('Ошибка сохранения');
       }
     } finally {
       setLoading(false);

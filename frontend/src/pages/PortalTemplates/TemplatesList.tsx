@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { Button, IconButton, Stack, Typography, Chip } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
@@ -26,21 +26,21 @@ export default function TemplatesList({ onEdit, onAdd }: TemplatesListProps) {
   const [previewVenueId, setPreviewVenueId] = useState<number>(1);
   const { showSuccess, showError } = useSnackbar();
 
-  useEffect(() => {
-    fetchTemplates();
-  }, []);
-
-  const fetchTemplates = async () => {
+  const fetchTemplates = useCallback(async () => {
     setLoading(true);
     try {
       const response = await api.get('/portal-templates');
       setTemplates(response.data);
-    } catch (err) {
+    } catch {
       showError('Не удалось загрузить шаблоны');
     } finally {
       setLoading(false);
     }
-  };
+  }, [showError]);
+
+  useEffect(() => {
+    fetchTemplates();
+  }, [fetchTemplates]);
 
   const handleDeleteClick = (id: number) => setDeleteId(id);
 
@@ -50,7 +50,7 @@ export default function TemplatesList({ onEdit, onAdd }: TemplatesListProps) {
       await api.delete(`/portal-templates/${deleteId}`);
       showSuccess('Шаблон удалён');
       fetchTemplates();
-    } catch (err) {
+    } catch {
       showError('Ошибка при удалении');
     } finally {
       setDeleteId(null);
