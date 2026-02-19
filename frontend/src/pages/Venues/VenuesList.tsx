@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { Button, IconButton, Stack, Typography, Chip } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
@@ -21,7 +21,11 @@ export default function VenuesList({ onEdit, onAdd }: VenuesListProps) {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const { showSuccess, showError } = useSnackbar();
 
-  const fetchVenues = useCallback(async () => {
+  useEffect(() => {
+    fetchVenues();
+  }, []);
+
+  const fetchVenues = async () => {
     setLoading(true);
     try {
       const response = await api.get('/venues');
@@ -31,11 +35,7 @@ export default function VenuesList({ onEdit, onAdd }: VenuesListProps) {
     } finally {
       setLoading(false);
     }
-  }, [showError]);
-
-  useEffect(() => {
-    fetchVenues();
-  }, [fetchVenues]);
+  };
 
   const handleDeleteClick = (id: number) => setDeleteId(id);
 

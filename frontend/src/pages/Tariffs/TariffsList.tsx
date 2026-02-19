@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Paper,
   Table,
@@ -27,7 +27,7 @@ interface TariffsListProps {
   onAdd: () => void;
 }
 
-const TariffsList: React.FC<TariffsListProps> = ({ onEdit, onAdd }) => {
+export default function TariffsList({ onEdit, onAdd }: TariffsListProps) {
   const [tariffs, setTariffs] = useState<Tariff[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -36,11 +36,12 @@ const TariffsList: React.FC<TariffsListProps> = ({ onEdit, onAdd }) => {
   const fetchTariffs = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/tariff-plans/'); // обратите внимание на слеш
+      const response = await api.get('/tariff-plans/');
       setTariffs(response.data);
-    } catch (err: any) {
-      setError(err.message || 'Ошибка загрузки');
-      showError(err.message || 'Ошибка загрузки');
+      setError('');
+    } catch {
+      setError('Ошибка загрузки');
+      showError('Ошибка загрузки');
     } finally {
       setLoading(false);
     }
@@ -56,8 +57,8 @@ const TariffsList: React.FC<TariffsListProps> = ({ onEdit, onAdd }) => {
       await api.delete(`/tariff-plans/${id}`);
       showSuccess('Тариф удалён');
       fetchTariffs();
-    } catch (err: any) {
-      showError(err.message || 'Ошибка удаления');
+    } catch {
+      showError('Ошибка удаления');
     }
   };
 
@@ -120,6 +121,4 @@ const TariffsList: React.FC<TariffsListProps> = ({ onEdit, onAdd }) => {
       </TableContainer>
     </div>
   );
-};
-
-export default TariffsList;
+}

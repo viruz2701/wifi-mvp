@@ -30,7 +30,7 @@ export default function UsersList({ onEdit, onAdd }: UsersListProps) {
     try {
       const response = await api.get('/users');
       setUsers(response.data);
-    } catch (err) {
+    } catch {
       showError('Не удалось загрузить список пользователей');
     } finally {
       setLoading(false);
@@ -45,7 +45,7 @@ export default function UsersList({ onEdit, onAdd }: UsersListProps) {
       await api.delete(`/users/${deleteId}`);
       showSuccess('Пользователь удалён');
       fetchUsers();
-    } catch (err) {
+    } catch {
       showError('Ошибка при удалении');
     } finally {
       setDeleteId(null);

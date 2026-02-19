@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { Button, IconButton, Stack, Typography, Chip, Tooltip } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
@@ -27,7 +27,11 @@ export default function NasDevicesList({ onEdit, onAdd }: NasDevicesListProps) {
   const [selectedNasId, setSelectedNasId] = useState<number | null>(null);
   const { showSuccess, showError } = useSnackbar();
 
-  const fetchDevices = useCallback(async () => {
+  useEffect(() => {
+    fetchDevices();
+  }, []);
+
+  const fetchDevices = async () => {
     setLoading(true);
     try {
       const response = await api.get('/nas-devices');
@@ -37,11 +41,7 @@ export default function NasDevicesList({ onEdit, onAdd }: NasDevicesListProps) {
     } finally {
       setLoading(false);
     }
-  }, [showError]);
-
-  useEffect(() => {
-    fetchDevices();
-  }, [fetchDevices]);
+  };
 
   const handleDeleteClick = (id: number) => setDeleteId(id);
 

@@ -1,23 +1,25 @@
+// frontend/src/hooks/useSnackbar.ts
+import { useCallback } from 'react';
 import { useSnackbar as useNotistackSnackbar } from 'notistack';
 
 export const useSnackbar = () => {
   const { enqueueSnackbar } = useNotistackSnackbar();
 
-  const showSuccess = (message: string) => {
+  const showSuccess = useCallback((message: string) => {
     enqueueSnackbar(message, { variant: 'success' });
-  };
+  }, [enqueueSnackbar]);
 
-  const showError = (message: string) => {
+  const showError = useCallback((message: string) => {
     enqueueSnackbar(message, { variant: 'error' });
-  };
+  }, [enqueueSnackbar]);
 
-  const showInfo = (message: string) => {
+  const showInfo = useCallback((message: string) => {
     enqueueSnackbar(message, { variant: 'info' });
-  };
+  }, [enqueueSnackbar]);
 
-  const showWarning = (message: string) => {
+  const showWarning = useCallback((message: string) => {
     enqueueSnackbar(message, { variant: 'warning' });
-  };
+  }, [enqueueSnackbar]);
 
   return { showSuccess, showError, showInfo, showWarning };
 };

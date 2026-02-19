@@ -1,5 +1,4 @@
-// src/pages/Banners/BannersList.tsx
-import { useState, useEffect } from 'react'; // удалён useCallback
+import { useEffect, useState } from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import {
   Button,
@@ -71,7 +70,6 @@ export default function BannersList({ onEdit, onAdd }: BannersListProps) {
     try {
       await deleteBanner(deleteId);
       showSuccess('Баннер удалён');
-      // Обновляем список после удаления
       if (selectedVenue !== '') {
         const venueId = selectedVenue === 0 ? undefined : selectedVenue;
         const response = await getBanners(venueId);

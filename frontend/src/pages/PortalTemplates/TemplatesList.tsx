@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { Button, IconButton, Stack, Typography, Chip } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
@@ -26,33 +26,36 @@ export default function TemplatesList({ onEdit, onAdd }: TemplatesListProps) {
   const [previewVenueId, setPreviewVenueId] = useState<number>(1);
   const { showSuccess, showError } = useSnackbar();
 
-  const fetchTemplates = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await api.get('/portal-templates');
-      setTemplates(response.data);
-    } catch {
-      showError('Не удалось загрузить шаблоны');
-    } finally {
-      setLoading(false);
-    }
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      setLoading(true);
+      try {
+        const response = await api.get('/portal-templates');
+        setTemplates(response.data);
+      } catch {
+        showError('Не удалось загрузить шаблоны');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTemplates();
   }, [showError]);
 
-  useEffect(() => {
-    fetchTemplates();
-  }, [fetchTemplates]);
-
-  const handleDeleteClick = (id: number) => setDeleteId(id);
-
-  const handleConfirmDelete = async () => {
-    if (!deleteId) return;
+  const handleDelete = async (id: number) => {
+    if (!window.confirm('Удалить шаблон?')) return;
     try {
-      await api.delete(`/portal-templates/${deleteId}`);
+      await api.delete(`/portal-templates/${id}`);
       showSuccess('Шаблон удалён');
-      fetchTemplates();
+      setTemplates(prev => prev.filter(t => t.id !== id));
     } catch {
       showError('Ошибка при удалении');
-    } finally {
+    }
+  };
+
+  const handleDeleteClick = (id: number) => setDeleteId(id);
+  const handleConfirmDelete = () => {
+    if (deleteId) {
+      handleDelete(deleteId);
       setDeleteId(null);
     }
   };
@@ -75,7 +78,14 @@ export default function TemplatesList({ onEdit, onAdd }: TemplatesListProps) {
       width: 150,
       renderCell: (params) => (
         <Stack direction="row" spacing={1}>
-          <IconButton size="small" onClick={() => { setPreviewTemplateId(params.row.id); setPreviewVenueId(params.row.venue_id); setPreviewOpen(true); }}>
+          <IconButton
+            size="small"
+            onClick={() => {
+              setPreviewTemplateId(params.row.id);
+              setPreviewVenueId(params.row.venue_id);
+              setPreviewOpen(true);
+            }}
+          >
             <VisibilityIcon />
           </IconButton>
           <IconButton size="small" onClick={() => onEdit(params.row.id)}>
@@ -89,7 +99,7 @@ export default function TemplatesList({ onEdit, onAdd }: TemplatesListProps) {
     },
   ];
 
-  if (loading && templates.length === 0) return <LoadingScreen message="Загрузка шаблонов..." />;
+  if (loading) return <LoadingScreen message="Загрузка шаблонов..." />;
 
   return (
     <>
@@ -100,12 +110,7 @@ export default function TemplatesList({ onEdit, onAdd }: TemplatesListProps) {
             Добавить
           </Button>
         </Stack>
-        <DataGrid
-          rows={templates}
-          columns={columns}
-          loading={loading}
-          pageSizeOptions={[10, 25, 50, 100]}
-        />
+        <DataGrid rows={templates} columns={columns} loading={loading} pageSizeOptions={[10, 25, 50, 100]} />
       </div>
       {previewTemplateId && (
         <PreviewDialog

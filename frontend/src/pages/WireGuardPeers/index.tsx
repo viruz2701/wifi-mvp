@@ -1,5 +1,4 @@
-// src/pages/WireGuardPeers/index.tsx
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { IconButton, Stack, Typography, Tooltip } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';

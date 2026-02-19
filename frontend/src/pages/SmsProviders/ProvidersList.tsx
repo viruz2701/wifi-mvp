@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Paper,
   Table,
@@ -21,37 +21,35 @@ import AddIcon from '@mui/icons-material/Add';
 import { SmsProvider } from './types';
 import api from '@/api/axios';
 import { useSnackbar } from '@/hooks/useSnackbar';
-import { AxiosError } from 'axios';
 
 interface ProvidersListProps {
   onEdit: (provider: SmsProvider) => void;
   onAdd: () => void;
 }
 
-const ProvidersList: React.FC<ProvidersListProps> = ({ onEdit, onAdd }) => {
+export default function ProvidersList({ onEdit, onAdd }: ProvidersListProps) {
   const [providers, setProviders] = useState<SmsProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { showSuccess, showError } = useSnackbar();
 
-  const fetchProviders = useCallback(async () => {
+  const fetchProviders = async () => {
     setLoading(true);
     try {
       const response = await api.get('/sms-providers');
       setProviders(response.data);
       setError('');
-    } catch (err) {
-      const errorMessage = err instanceof AxiosError ? err.message : 'Ошибка загрузки';
-      setError(errorMessage);
-      showError(errorMessage);
+    } catch {
+      setError('Ошибка загрузки');
+      showError('Ошибка загрузки');
     } finally {
       setLoading(false);
     }
-  }, [showError]);
+  };
 
   useEffect(() => {
     fetchProviders();
-  }, [fetchProviders]);
+  }, []);
 
   const handleDelete = async (id: number) => {
     if (!window.confirm('Удалить провайдера?')) return;
@@ -59,9 +57,8 @@ const ProvidersList: React.FC<ProvidersListProps> = ({ onEdit, onAdd }) => {
       await api.delete(`/sms-providers/${id}`);
       showSuccess('Провайдер удалён');
       fetchProviders();
-    } catch (err) {
-      const errorMessage = err instanceof AxiosError ? err.message : 'Ошибка удаления';
-      showError(errorMessage);
+    } catch {
+      showError('Ошибка удаления');
     }
   };
 
@@ -70,9 +67,8 @@ const ProvidersList: React.FC<ProvidersListProps> = ({ onEdit, onAdd }) => {
       await api.post(`/sms-providers/${id}/set-active`);
       showSuccess('Провайдер активирован');
       fetchProviders();
-    } catch (err) {
-      const errorMessage = err instanceof AxiosError ? err.message : 'Ошибка активации';
-      showError(errorMessage);
+    } catch {
+      showError('Ошибка активации');
     }
   };
 
@@ -107,7 +103,7 @@ const ProvidersList: React.FC<ProvidersListProps> = ({ onEdit, onAdd }) => {
                 <TableCell>{provider.name}</TableCell>
                 <TableCell>{provider.type}</TableCell>
                 <TableCell>
-                  <Chip 
+                  <Chip
                     label={provider.is_active ? 'Активен' : 'Неактивен'}
                     color={provider.is_active ? 'success' : 'default'}
                     size="small"
@@ -115,8 +111,8 @@ const ProvidersList: React.FC<ProvidersListProps> = ({ onEdit, onAdd }) => {
                 </TableCell>
                 <TableCell>
                   {!provider.is_active && (
-                    <Button 
-                      size="small" 
+                    <Button
+                      size="small"
                       variant="outlined"
                       onClick={() => handleSetActive(provider.id)}
                     >
@@ -139,6 +135,4 @@ const ProvidersList: React.FC<ProvidersListProps> = ({ onEdit, onAdd }) => {
       </TableContainer>
     </div>
   );
-};
-
-export default ProvidersList;
+}

@@ -1,5 +1,5 @@
 // src/pages/NasLogs/index.tsx
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Paper, Typography, FormControl, InputLabel, Select, MenuItem, Button, Stack, Box } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -29,16 +29,21 @@ export default function NasLogs() {
   const [pageSize, setPageSize] = useState(50);
   const { showError } = useSnackbar();
 
-  const fetchNasDevices = useCallback(async () => {
-    try {
-      const response = await api.get('/nas-devices');
-      setNasDevices(response.data);
-    } catch {
-      showError('Не удалось загрузить список устройств');
-    }
+  // Загружаем список устройств один раз при монтировании
+  useEffect(() => {
+    const fetchNasDevices = async () => {
+      try {
+        const response = await api.get('/nas-devices');
+        setNasDevices(response.data);
+      } catch {
+        showError('Не удалось загрузить список устройств');
+      }
+    };
+    fetchNasDevices();
   }, [showError]);
 
-  const fetchLogs = useCallback(async () => {
+  // Функция загрузки логов вызывается только по кнопке
+  const fetchLogs = async () => {
     setLoading(true);
     try {
       const params: Record<string, unknown> = {
@@ -50,7 +55,6 @@ export default function NasLogs() {
       if (toDate) params.to_date = toDate.toISOString().split('T')[0];
 
       const response = await api.get('/nas-status-history', { params });
-      // Обогащаем записи именами устройств
       const enriched = response.data.map((rec: NasStatusRecord) => ({
         ...rec,
         nas_name: nasDevices.find(d => d.id === rec.nas_device_id)?.name || `ID ${rec.nas_device_id}`,
@@ -61,15 +65,7 @@ export default function NasLogs() {
     } finally {
       setLoading(false);
     }
-  }, [selectedNas, fromDate, toDate, page, pageSize, nasDevices, showError]);
-
-  useEffect(() => {
-    fetchNasDevices();
-  }, [fetchNasDevices]);
-
-  useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
+  };
 
   const columns: GridColDef[] = [
     { field: 'id', headerName: 'ID', width: 70 },
@@ -79,10 +75,9 @@ export default function NasLogs() {
       field: 'checked_at',
       headerName: 'Время проверки',
       width: 200,
-      valueFormatter: (params: { value: unknown }) => {
-        const value = params.value;
-        if (typeof value === 'string') {
-          return new Date(value).toLocaleString();
+      renderCell: (params) => {
+        if (params.value && typeof params.value === 'string') {
+          return new Date(params.value).toLocaleString();
         }
         return '';
       },

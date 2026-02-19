@@ -27,7 +27,7 @@ interface SocialActionsListProps {
   onAdd: () => void;
 }
 
-const SocialActionsList: React.FC<SocialActionsListProps> = ({ onEdit, onAdd }) => {
+export default function SocialActionsList({ onEdit, onAdd }: SocialActionsListProps) {
   const [actions, setActions] = useState<SocialAction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -38,10 +38,10 @@ const SocialActionsList: React.FC<SocialActionsListProps> = ({ onEdit, onAdd }) 
     try {
       const response = await api.get('/social/actions');
       setActions(response.data);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Ошибка загрузки';
-      setError(errorMessage);
-      showError(errorMessage);
+      setError('');
+    } catch {
+      setError('Ошибка загрузки');
+      showError('Ошибка загрузки');
     } finally {
       setLoading(false);
     }
@@ -57,9 +57,8 @@ const SocialActionsList: React.FC<SocialActionsListProps> = ({ onEdit, onAdd }) 
       await api.delete(`/social/actions/${id}`);
       showSuccess('Действие удалено');
       fetchActions();
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Ошибка удаления';
-      showError(errorMessage);
+    } catch {
+      showError('Ошибка удаления');
     }
   };
 
@@ -116,6 +115,4 @@ const SocialActionsList: React.FC<SocialActionsListProps> = ({ onEdit, onAdd }) 
       </TableContainer>
     </div>
   );
-};
-
-export default SocialActionsList;
+}

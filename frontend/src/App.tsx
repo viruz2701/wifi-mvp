@@ -55,15 +55,15 @@ function App() {
             <Route path="nas-devices" element={<NasDevicesPage />} />
             <Route path="nas-logs" element={<NasLogs />} />
             <Route path="banners" element={<BannersPage />} />
-            <Route path="/social-actions" element={<SocialActionsPage />} />
+            <Route path="social-actions" element={<SocialActionsPage />} />
             <Route path="user-profiles" element={<UserProfilesPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="portal-templates" element={<PortalTemplatesPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="settings" element={<SettingsPage />} />
-            <Route path="/crm-providers" element={<CrmProvidersPage />} />
-            <Route path="/radius-attributes" element={<RadiusAttributesPage />} />
-            <Route path="/tariffs" element={<TariffsPage />} />
+            <Route path="crm-providers" element={<CrmProvidersPage />} />
+            <Route path="radius-attributes" element={<RadiusAttributesPage />} />
+            <Route path="tariffs" element={<TariffsPage />} />
           </Route>
         </Routes>
       </SnackbarProvider>
